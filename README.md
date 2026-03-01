@@ -210,14 +210,13 @@ Key user needs:
 
 ---
 
-| Name              | Role                                  | GitHub Profile                                                                                    | LinkedIn Profile                                                                                                             |
-| ----------------- | -------------------------------------  ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Nicholas Dobson   | Full-Stack Developer, DevOps      |    [<img src="assets/github-icon.png" alt="GitHub" width="50"/>](https://github.com/NicholasDobson)  | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="50"/>](https://www.linkedin.com/in/nicholas-dobson-a64a84355)   |
-| Mpho Tsotetsi     | Backend Developer            | [<img src="assets/github-icon.png" alt="GitHub" width="50"/>](https://github.com/u22668323)       | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="50"/>](https://www.linkedin.com/in/mpho-tsotetsi-256375287/)    |
-| Taylor  | Full-Stack Developer, Team Lead       | [<img src="assets/github-icon.png" alt="GitHub" width="50"/>](https://github.com/ShaylinGovender) | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="50"/>](https://www.linkedin.com/in/shaylin-govender-827347343)  |
-| Lonwabo Kwitshana | Frontend Developer, UI/UX                                        | [<img src="assets/github-icon.png" alt="GitHub" width="50"/>](https://github.com/7onwabo)         | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="50"/>](https://www.linkedin.com/in/lonwabo-kwitshana-b483831a6) |
-| Diya   | Backend Developer, System Integration                     | [<img src="assets/github-icon.png" alt="GitHub" width="50"/>](https://github.com/AryanMohanlall)  | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="50"/>](https://www.linkedin.com/in/aryan-mohanlall-a45a89355)   |
-
+| Name               | Role                                         | GitHub Profile                                                                                     | LinkedIn Profile                                                                                                              |
+|--------------------|----------------------------------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
+| Nicholas Dobson    | Full-Stack Developer, DevOps                  | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/NicholasDobson)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/nicholas-dobson-a64a84355)   |
+| Mpho Tsotetsi      | Backend Developer                             | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/u22668323)        | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/mpho-tsotetsi-256375287/)    |
+| Taylor     | Full-Stack Developer, Team Lead               | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/ShaylinGovender) | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/shaylin-govender-827347343)  |
+| Lonwabo Kwitshana  | Frontend Developer, UI/UX                     | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/7onwabo)          | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/lonwabo-kwitshana-b483831a6) |
+| Diya     | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/AryanMohanlall)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/aryan-mohanlall-a45a89355)   |
 <p align="right">
    <a href="#table-of-contents">Back to top</a>
 </p>
