@@ -27,7 +27,7 @@ This project aims to deliver a **centralised, cloud-native solution** that integ
 
 ---
 
-# 🧠 Phase 1: Marketing Research & Prototyping
+# Phase 1: Marketing Research & Prototyping
 
 ## Market Research
 Target users include:
@@ -70,7 +70,7 @@ Key user needs:
 
 ---
 
-# 📐 Phase 2: Requirements & Design
+# Phase 2: Requirements & Design
 
 ## Functional Requirements
 - Secure user authentication
@@ -103,7 +103,7 @@ Key user needs:
 
 ---
 
-# 🛠 Phase 3: Core Development
+# Phase 3: Core Development
 
 ## Key Implementations
 - Progressive Web App frontend
@@ -120,7 +120,7 @@ Key user needs:
 
 ---
 
-# 🧪 Phase 4: User Testing
+# Phase 4: User Testing
 
 ## Testing Activities
 - Task-based usability testing
@@ -135,7 +135,7 @@ Key user needs:
 
 ---
 
-# 🔧 Phase 5: Refinement
+# Phase 5: Refinement
 
 - Bug fixes
 - UI/UX improvements
@@ -144,7 +144,7 @@ Key user needs:
 
 ---
 
-# 🚀 Phase 6: Final Testing & Deployment
+# Phase 6: Final Testing & Deployment
 
 ## Testing
 - System integration testing
