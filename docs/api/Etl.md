@@ -2,7 +2,7 @@
 
 ## `/upload` 
 ### Request
-- expects a `.xlsx` file (staramr, ResFinderPlus, Binary Information)
+- expects a `.xlsx` file (staramr, ResFinderPlus, Binary Information, EpiCollect)
 
 ### Response 
 - **Success**: 200 

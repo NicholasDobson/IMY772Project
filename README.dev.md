@@ -23,7 +23,15 @@ Port: 5432
 docker-compose up -d
 ```
 
+**Clearing** the database:
+```bash
+docker-compose down -v
+```
+
 **Viewing database**:
+Use a app like PgAdmin or DBeaver to and enter the credentials as necessary.
+If you don't have an app for viewing postgreSQL data, do the following:
+
 1. go to `http://localhost:5050` 
 2. Log in using credentials from docker:
 ```
@@ -52,3 +60,7 @@ mvnw.cmd spring-boot:run
 ```
 *^I Think :/*
 
+To wipe the old compiled files (do this after adding new dependencies/libraries):
+```bash
+./mvnw clean
+```
