@@ -22,8 +22,8 @@ jobs:
         id: linter
         uses: github/super-linter@v5
         env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-          VALIDATE_JAVA: true #check java tag might causee error
+          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true # is this causing the No event triggers defined in `on` ERROR?
+          VALIDATE_JAVA: true 
           VALIDATE_TYPESCRIPT: true
           VALIDATE_JAVASCRIPT: true
           VALIDATE_CSS: true
