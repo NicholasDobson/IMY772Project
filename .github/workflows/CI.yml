@@ -1,0 +1,634 @@
+name: Continuous Integration Pipeline
+# NicDevelopment 
+on:
+  push:
+    branches: [main, Dev]
+  pull_request:
+    branches: [main, Dev]
+
+jobs:
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/Dev'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Run Super-Linter with output to JSON format
+      # Run Super-Linter with direct output capture
+      - name: Run Super Linter
+        id: linter
+        uses: github/super-linter@v5
+        env:
+          VALIDATE_JAVA: true #check java tag might causee error
+          VALIDATE_TYPESCRIPT: true
+          VALIDATE_JAVASCRIPT: true
+          VALIDATE_CSS: true
+          VALIDATE_HTML: true
+          VALIDATE_ALL_CODEBASE: true
+          DEFAULT_BRANCH: Dev
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Use the API ESLint config for API JS files (enforces semicolons)
+          ESLINT_CONFIG_FILE_API: ./API/.eslintrc.json
+          # Use the frontend ESLint config for TS/TSX/Cypress files
+          ESLINT_CONFIG_FILE_FRONTEND: ./frontend/.eslintrc.json
+          FILTER_REGEX_EXCLUDE: ".*node_modules/.*"
+          # Enable debuggable output
+          LOG_LEVEL: ERROR
+          # Continue even when finding errors to see all errors
+          DISABLE_ERRORS: true
+
+  test-backend:
+    name: Backend Tests (Unit, Integration)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      ## CHANGE TO MAVEN FOR JAVA
+      # - name: Set up Python
+      #   uses: actions/setup-python@v4
+      #   with:
+      #     python-version: '3.10'
+      #     cache: 'pip'
+      # Add caching for dependencies to speed up workflow
+
+      # - name: Install dependencies
+      #   working-directory: ./AI_Model_BB/Testing
+      #   run: |
+      #     python -m pip install --upgrade pip
+          
+      #     # Check if requirements file exists
+      #     if [ -f "test_requirements.txt" ]; then
+      #       pip install -r test_requirements.txt
+      #     else
+      #       echo "test_requirements.txt not found, installing basic testing dependencies..."
+      #       pip install pytest opencv-python numpy
+      #     fi
+
+      # - name: Run Python tests
+      #   working-directory: ./AI_Model_BB/Testing
+      #   run: |
+      #     # Check if test file exists
+      #     if [ -f "test_car_detection.py" ]; then
+      #       python -m pytest test_car_detection.py -v
+      #     else
+      #       echo "test_car_detection.py not found, creating basic test..."
+      #       cat > test_car_detection.py << 'EOF'
+      #     import pytest
+
+      #     def test_basic_functionality():
+      #         """Basic test to ensure AI model testing works"""
+      #         assert True, "Basic test passed"
+
+      #     def test_imports():
+      #         """Test that required libraries can be imported"""
+      #         try:
+      #             import cv2
+      #             import numpy as np
+      #             assert True, "Required libraries imported successfully"
+      #         except ImportError as e:
+      #             pytest.fail(f"Failed to import required libraries: {e}")
+      #     EOF
+      #       python -m pytest test_car_detection.py -v
+      #     fi
+
+      # - name: Upload Test Artifacts
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: ai-model-test-report
+      #     path: ./AI_Model_BB/Testing
+
+  test-api:
+    name: API Tests (Unit, Integration, NonFunctional)
+    runs-on: ubuntu-latest
+    # No longer using local postgres service, now using springboot
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '18'
+      #     cache: 'npm'
+      #     cache-dependency-path: ./API/package-lock.json
+      # # Add caching for dependencies to speed up workflow
+      # - name: Install API dependencies
+      #   working-directory: ./API
+      #   run: npm install
+
+      # - name: Install PostgreSQL client
+      #   run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      # - name: Test database connectivity
+      #   run: |
+      #     echo "Testing connection to remote PostgreSQL database..."
+      #     # Using connection string with sslmode=require for AWS RDS
+      #     PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} pg_isready -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }}
+      #     if [ $? -eq 0 ]; then
+      #       echo "Remote PostgreSQL connection successful!"
+      #     else
+      #       echo "Failed to connect to remote PostgreSQL database!"
+      #       echo "Testing with PGSSLMODE environment variable..."
+      #       # Try using PGSSLMODE environment variable which pg_isready respects
+      #       PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} pg_isready -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }}
+      #       if [ $? -eq 0 ]; then
+      #         echo "Connection with PGSSLMODE=require successful!"
+      #       else
+      #         echo "Failed to connect with SSL. Check database configuration and credentials."
+      #         exit 1
+      #       fi
+      #     fi
+
+      # - name: Debug PostgreSQL connection
+      #   run: |
+      #     echo "===== POSTGRESQL CONNECTION DEBUG ====="
+      #     echo "PostgreSQL client version:"
+      #     psql --version
+          
+      #     echo "Available PostgreSQL environment variables:"
+      #     echo "PGHOST: [Redacted]"
+      #     echo "PGPORT: ${{ secrets.DATABASE_PORT }}"
+      #     echo "PGDATABASE: ${{ secrets.DATABASE_NAME }}"
+      #     echo "PGUSER: ${{ secrets.DATABASE_USERNAME }}"
+      #     echo "PGPASSWORD: [REDACTED]"
+          
+      #     echo "Testing simple connection with SSL mode set via environment variable:"
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "SELECT version();" || echo "Connection failed"
+          
+      #     echo "Checking current user and database:"
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT current_user, current_database();
+      #     " || echo "Connection check failed"
+          
+      #     echo "Checking table visibility (using pg_catalog):"
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT n.nspname as schema, c.relname as table
+      #       FROM pg_catalog.pg_class c
+      #       JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+      #       WHERE c.relkind = 'r' AND n.nspname = 'public'
+      #       ORDER BY schema, table;
+      #     " || echo "Table listing query failed"
+          
+      #     echo "Checking current user's table permissions:"
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT 
+      #         has_table_privilege(current_user, 'public.\"User\"', 'SELECT') AS can_select_user,
+      #         has_table_privilege(current_user, 'public.\"User\"', 'INSERT') AS can_insert_user,
+      #         has_table_privilege(current_user, 'public.\"Incidents\"', 'SELECT') AS can_select_incidents,
+      #         has_table_privilege(current_user, 'public.\"Alerts\"', 'SELECT') AS can_select_alerts;
+      #     " || echo "Permission check failed"
+          
+      #     echo "===== END DEBUG ====="
+
+      # - name: Verify database tables
+      #   run: |
+      #     echo "Verifying database tables in remote database..."
+      #     # Using PGSSLMODE environment variable for SSL connection and checking for tables directly
+      #     # We're now specifically targeting the public schema where our tables reside
+          
+      #     # First, list all tables in the public schema
+      #     echo "Listing all tables in public schema..."
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT table_name 
+      #       FROM information_schema.tables 
+      #       WHERE table_schema = 'public' AND table_type = 'BASE TABLE'
+      #       ORDER BY table_name;
+      #     " || echo "Table listing query failed - may have limited visibility, continuing with direct checks"
+          
+      #     # Now check if we can directly access the tables we need using pg_catalog
+      #     echo "Checking direct table access in public schema..."
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT 
+      #         EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
+      #               WHERE c.relname = 'User' AND n.nspname = 'public' AND c.relkind = 'r') AS user_table_exists,
+      #         EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
+      #               WHERE c.relname = 'Incidents' AND n.nspname = 'public' AND c.relkind = 'r') AS incidents_table_exists,
+      #         EXISTS(SELECT 1 FROM pg_catalog.pg_class c JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace 
+      #               WHERE c.relname = 'Alerts' AND n.nspname = 'public' AND c.relkind = 'r') AS alerts_table_exists;
+      #     " || echo "Direct table check failed, trying alternative approach"
+          
+      #     # As a fallback, try to count rows which will fail if tables don't exist
+      #     echo "Checking tables with direct queries (fallback)..."
+      #     PGSSLMODE=require PGPASSWORD=${{ secrets.DATABASE_PASSWORD }} psql -h ${{ secrets.DATABASE_HOST }} -p ${{ secrets.DATABASE_PORT }} -U ${{ secrets.DATABASE_USERNAME }} -d ${{ secrets.DATABASE_NAME }} -c "
+      #       SELECT 'User' AS table_name, COUNT(*) AS row_count FROM public.\"User\" 
+      #       UNION ALL
+      #       SELECT 'Incidents' AS table_name, COUNT(*) AS row_count FROM public.\"Incidents\"
+      #       UNION ALL
+      #       SELECT 'Alerts' AS table_name, COUNT(*) AS row_count FROM public.\"Alerts\";
+      #     " || echo "Direct count queries failed - there may be table permission issues"
+
+      # - name: Run API tests
+      #   working-directory: ./API
+      #   env:
+      #     NODE_ENV: test
+      #     DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+      #     DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+      #     DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+      #     DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+      #     DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+      #     DATABASE_SSL: true
+      #     WEATHERAPI: ${{ secrets.WEATHERAPI }}
+      #     TOMTOMAPI: ${{ secrets.TOMTOMAPI }}
+      #   run: |
+      #     # Start server and run tests in sequence
+      #     echo "Starting server and running tests..."
+      #     npm run dev &
+      #     sleep 10  # Wait for server to start
+      #     npm test
+      #     kill $(jobs -p) || true  # Kill background server process
+
+  test-ui:
+    name: UI Tests (Component & E2E)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # - name: Setup Node.js
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '18'
+      #     cache: 'npm'
+      #     cache-dependency-path: |
+      #       ./frontend/package-lock.json
+      #       ./API/package-lock.json
+      # # Add caching for dependencies to speed up workflow      
+      # - name: Install UI dependencies
+      #   working-directory: ./frontend
+      #   run: |
+      #     npm install
+      #     echo "Frontend dependencies installed successfully"
+
+      # - name: Setup environment for Cypress
+      #   working-directory: ./frontend # will need to update this 
+      #   run: |
+      #     # Create a .env file for Cypress testing
+      #     # This file will be used by Cypress to configure the testing environment and will run locally on github actions on these specific ports
+      #     echo "REACT_APP_API_URL=http://localhost:5000" > .env
+      #     echo "CYPRESS_BASE_URL=http://localhost:3000" >> .env
+      #     echo "CYPRESS_API_URL=http://localhost:5000/api" >> .env
+      #     echo "Environment set up for Cypress tests"
+          
+      # - name: Start API in background for E2E tests 
+      #   working-directory: ./API
+      #   run: |
+      #     npm install
+      #     # Start API server in background with test configuration
+      #     echo "Starting API server (REQUIRED before frontend)..."
+      #     NODE_ENV=test npm run dev &
+      #     echo "API server started in background"
+      #     sleep 10 # Give the API time to start
+          
+      #     # Verify API is running
+      #     echo "Verifying API is running..."
+      #     curl -s http://localhost:5000/api/health || echo "API health endpoint not available, assuming server is still starting"
+          
+      # - name: Start frontend in background for E2E tests
+      #   working-directory: ./frontend
+      #   run: |
+      #     # Start frontend in background for E2E tests after API is running
+      #     echo "Starting frontend (after API is running)..."
+      #     npm start &
+      #     echo "Frontend started in background"
+      #     sleep 30 # Give the frontend time to start
+          
+      # - name: Prepare Cypress test environment
+      #   working-directory: ./frontend
+      #   run: |
+      #     # Create directories for test reports
+      #     mkdir -p cypress/reports/mochawesome/.jsons
+      #     # Ensure there's a mochawesome configuration in cypress.config.ts
+      #     echo "Cypress test environment prepared"
+      # - name: Run Cypress component tests
+      #   working-directory: ./frontend
+      #   continue-on-error: true
+      #   run: |
+      #     npx cypress run --component
+      #     echo "Component tests completed"
+          
+      # - name: Run Cypress E2E tests
+      #   working-directory: ./frontend
+      #   run: |
+      #     npx cypress run --e2e
+      #     echo "E2E tests completed"
+          
+      # - name: Upload Cypress screenshots
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: cypress-screenshots
+      #     path: ./frontend/cypress/screenshots
+          
+      # - name: Upload Cypress videos
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: cypress-videos
+      #     path: ./frontend/cypress/videos
+          
+      # - name: Upload Cypress test reports
+      #   uses: actions/upload-artifact@v4
+      #   if: always()
+      #   with:
+      #     name: cypress-test-reports
+      #     path: ./frontend/cypress/reports
+
+  # build:
+  #   name: Build Project
+  #   needs: [test-ui, test-api, test-ai-model]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Setup Node.js for builds
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '18'
+  #         cache: 'npm'
+  #         cache-dependency-path: |
+  #           ./frontend/package-lock.json
+  #           ./API/package-lock.json
+            
+  #     # First build the API since the frontend depends on it
+  #     - name: Build API
+  #       working-directory: ./API
+  #       run: |
+  #         echo "===== BUILDING API ====="
+  #         npm install
+          
+  #         # Create production build for API
+  #         echo "Creating API production build..."
+  #         npm run build || echo "No explicit build step for API, using npm install for production dependencies"
+          
+  #         # Test API startup to verify build
+  #         echo "Testing API startup..."
+  #         npm run dev & 
+  #         API_PID=$!
+  #         sleep 5
+          
+  #         # Check if API is running
+  #         if ps -p $API_PID > /dev/null; then
+  #           echo "API build and startup successful"
+  #           kill $API_PID  # Stop the API process
+  #         else
+  #           echo "API startup failed"
+  #           exit 1
+  #         fi
+          
+  #         echo "API build completed successfully"
+          
+  #     # Then build the frontend after the API is built
+  #     - name: Build Frontend
+  #       working-directory: ./frontend
+  #       run: |
+  #         echo "===== BUILDING FRONTEND APPLICATION ====="
+  #         npm install
+          
+  #         # Disable ESLint plugin during build to prevent warnings from failing the build
+  #         # This approach preserves the warnings output but doesn't fail the build
+  #         echo "Starting production build with ESLint checks disabled..."
+  #         DISABLE_ESLINT_PLUGIN=true CI=false npm run build
+          
+  #         echo "Frontend build completed successfully"
+  #         echo "Build size: $(du -sh build | cut -f1)"
+  #     - name: Setup Python for AI Model
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.10'
+  #         cache: 'pip'
+  #     - name: Prepare AI Model for local deployment
+  #       working-directory: ./AI_Model_BB/Code
+  #       run: |
+  #         echo "===== PACKAGING AI MODEL FOR DEPLOYMENT ====="
+          
+  #         # Install dependencies for model packaging
+  #         echo "Installing Python dependencies..."
+  #         python -m pip install --upgrade pip
+  #         if [ -f "requirements.txt" ]; then
+  #           pip install -r requirements.txt
+  #           echo "Installed dependencies from requirements.txt"
+  #         else
+  #           # Install basic dependencies directly
+  #           echo "No requirements.txt found, installing core dependencies directly"
+  #           pip install opencv-python==4.8.0.76 numpy==1.24.3
+  #         fi
+          
+  #         # Create deployment package for local use
+  #         echo "Creating deployment package..."
+  #         mkdir -p deployment_package
+          
+  #         # Copy Python files
+  #         echo "Copying model files to deployment package..."
+  #         python_files=$(find . -maxdepth 1 -name "*.py" | wc -l)
+  #         if [ "$python_files" -gt 0 ]; then
+  #           cp *.py deployment_package/
+  #           echo "Copied $python_files Python files to deployment package"
+  #         else
+  #           echo "WARNING: No Python files found to copy"
+  #         fi
+          
+  #         # Create a basic configuration file for local deployment
+  #         echo "Creating configuration file..."
+  #         cat > deployment_package/config.json << EOF
+  #         {
+  #           "local_deployment": true,
+  #           "api_endpoint": "http://localhost:5000/api",
+  #           "model_settings": {
+  #             "confidence_threshold": 0.6,
+  #             "process_interval": 5
+  #           }
+  #         }
+  #         EOF
+          
+  #         echo "AI Model deployment package created successfully"
+  #         echo "Package size: $(du -sh deployment_package | cut -f1)"
+          
+  #     - name: Verify build artifacts
+  #       run: |
+  #         echo "===== VERIFYING BUILD ARTIFACTS ====="
+          
+  #         # Check API
+  #         if [ -d "API/node_modules" ]; then
+  #           echo "API build successful"
+  #           echo "   Key API files:"
+  #           find API/src -type f -name "*.js" | head -10
+  #           echo "   Total API files: $(find API/src -type f -name "*.js" | wc -l)"
+  #         else
+  #           echo "API build failed"
+  #           exit 1
+  #         fi
+          
+  #         # Check frontend build
+  #         if [ -d "frontend/build" ]; then
+  #           echo "Frontend build successful"
+  #           echo "   Files in build directory:"
+  #           find frontend/build -type f | grep -v "node_modules" | sort | head -10
+  #           echo "   Total files: $(find frontend/build -type f | wc -l)"
+  #         else
+  #           echo "Frontend build failed"
+  #           exit 1
+  #         fi
+          
+  #         # Check AI Model deployment package
+  #         if [ -d "AI_Model_BB/Code/deployment_package" ]; then
+  #           echo "AI Model deployment package created"
+  #           echo "   Files in deployment package:"
+  #           ls -la AI_Model_BB/Code/deployment_package/
+  #         else
+  #           echo "AI Model deployment package failed"
+  #           exit 1
+  #         fi
+          
+  #         echo "All build artifacts verified successfully!"
+  #         echo "API, Frontend, and AI Model components are ready for local deployment."
+  #         echo "Frontend and AI Model components are ready for local deployment."
+
+  # security-scan:
+  #   name: Security Scan (API keys, Audits,...)
+  #   runs-on: ubuntu-latest
+  #   needs: [lint]
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+
+  #     - name: Run npm audit for API
+  #       working-directory: ./API
+  #       timeout-minutes: 3
+  #       run: |
+  #         echo "Running npm audit for API..."
+  #         npm install --no-fund --no-audit
+  #         npm audit --audit-level=moderate || echo "Security vulnerabilities found in API dependencies"
+
+  #     - name: Run npm audit for Frontend
+  #       working-directory: ./frontend
+  #       timeout-minutes: 3
+  #       run: |
+  #         echo "Running npm audit for Frontend..."
+  #         npm install --no-fund --no-audit
+  #         npm audit --audit-level=moderate || echo "Security vulnerabilities found in Frontend dependencies"
+          
+  #     - name: Set up Python for AI security scan
+  #       uses: actions/setup-python@v4
+  #       with:
+  #         python-version: '3.10'
+          
+  #     - name: Run Python security scan for AI Model
+  #       working-directory: ./AI_Model_BB/Code
+  #       timeout-minutes: 3
+  #       run: |
+  #         echo "Running Python security checks for AI model..."
+  #         # Install security scanning tools
+  #         pip install safety bandit
+          
+  #         # Check dependencies with safety if requirements.txt exists
+  #         if [ -f "requirements.txt" ]; then
+  #           echo "Checking Python dependencies with safety..."
+  #           safety scan -r requirements.txt || echo "Vulnerabilities found in Python dependencies"
+  #         else
+  #           echo "No requirements.txt found, skipping dependency check"
+  #         fi
+          
+  #         # Scan code with bandit (Python security scanner)
+  #         echo "Scanning Python code with bandit..."
+  #         bandit -r . || echo "Potential security issues found in Python code"
+
+  #     - name: Enhanced secret detection
+  #       timeout-minutes: 2
+  #       run: |
+  #         echo "Running enhanced secret detection..."
+          
+  #         # Check for secrets in JavaScript/TypeScript files
+  #         echo "Checking JS/TS files for potential secrets..."
+  #         grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.js" --include="*.ts" --exclude-dir="node_modules" --exclude-dir=".git" . | \
+  #           grep -v "PASSWORD_PLACEHOLDER\|SECRET_PLACEHOLDER\|process.env\|.test.js\|.test.ts" || echo "No obvious JS/TS secrets found"
+          
+  #         # Check for secrets in Python files
+  #         echo "Checking Python files for potential secrets..."
+  #         grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.py" --exclude-dir="__pycache__" --exclude-dir=".git" . | \
+  #           grep -v "PASSWORD\|SECRET\|os.environ\|os.getenv\|test" || echo "No obvious Python secrets found"
+          
+  #         # Check for secrets in configuration files
+  #         echo "Checking configuration files for potential secrets..."
+  #         grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.xml" --exclude-dir="node_modules" --exclude-dir=".git" . | \
+  #           grep -v "PASSWORD\|SECRET\|\${\|node_modules" || echo "No obvious secrets found in config files"
+      
+  #     - name: Check for vulnerable dependencies
+  #       run: |
+  #         echo "Checking for commonly known vulnerable dependencies..."
+          
+  #         # Check for specific vulnerable packages in package.json files
+  #         echo "Checking JavaScript dependencies..."
+  #         find . -name "package.json" -not -path "*/node_modules/*" -exec grep -l "minimist\|lodash\|jquery\|socket.io\|ws\|express\|axios" {} \; || echo "No commonly scrutinized JS packages found"
+          
+  #         # Check for specific vulnerable packages in requirements.txt
+  #         echo "Checking Python dependencies..."
+  #         find . -name "requirements.txt" -exec grep -l "django\|flask\|numpy\|tensorflow\|torch\|cryptography\|requests" {} \; || echo "No commonly scrutinized Python packages found"
+      
+  #     - name: Code quality security scan
+  #       run: |
+  #         echo "Checking for potential security anti-patterns in code..."
+          
+  #         # Check for eval in JS files (potential security risk)
+  #         echo "Checking for eval() usage in JS/TS files..."
+  #         grep -r -i "eval(" --include="*.js" --include="*.ts" --exclude-dir="node_modules" --exclude-dir=".git" . || echo "No eval() found in JS/TS files"
+          
+  #         # Check for exec in Python (potential security risk)
+  #         echo "Checking for exec() usage in Python files..."
+  #         grep -r -i "exec(" --include="*.py" --exclude-dir="__pycache__" --exclude-dir=".git" . || echo "No exec() found in Python files"
+          
+  #         # Check for SQL injection vulnerabilities
+  #         echo "Checking for potential SQL injection patterns..."
+  #         grep -r -i "db.query\|connection.query\|execute(" --include="*.js" --include="*.py" --exclude-dir="node_modules" --exclude-dir="__pycache__" --exclude-dir=".git" . || echo "No obvious SQL query patterns found"
+
+  # # performance-test:
+  # #   name: Performance Test
+  # #   runs-on: ubuntu-latest
+  # #   needs: [build]
+  # #   if: github.ref == 'refs/heads/main'
+  # #   steps:
+  # #     - name: Checkout repository
+  # #       uses: actions/checkout@v4
+
+  # #     - name: Setup Node.js
+  # #       uses: actions/setup-node@v4
+  # #       with:
+  # #         node-version: '18'
+  # #         cache: 'npm'
+  # #         cache-dependency-path: ./API/package-lock.json
+  # #     # Add caching for dependencies to speed up workflow
+
+  # #     - name: Install API dependencies
+  # #       working-directory: ./API
+  # #       run: npm install
+
+  # #     - name: Run basic performance tests
+  # #       working-directory: ./API
+  # #       env:
+  # #         NODE_ENV: test
+  # #         DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+  # #         DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+  # #         DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+  # #         DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+  # #         DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+  # #         DATABASE_SSL: true
+  # #       run: |
+  # #         # Start server
+  # #         npm run dev &
+  # #         SERVER_PID=$!
+  # #         sleep 10
+          
+  # #         # Basic load test
+  # #         echo "Running basic performance tests..."
+  # #         for i in {1..10}; do
+  # #           curl -s http://localhost:5000/api/incidents > /dev/null || echo "Request $i failed"
+  # #         done
+          
+  # #         # Clean up
+  # #         kill $SERVER_PID || true
