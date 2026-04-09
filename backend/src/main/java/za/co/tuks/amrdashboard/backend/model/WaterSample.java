@@ -35,4 +35,7 @@ public class WaterSample {
 
     @OneToMany(mappedBy = "waterSample", cascade = CascadeType.ALL)
     private List<Isolate> isolates;
+
+    private String sampleName;
+    private String sampleAnalysisType; // e.g., "Metagenomics", "WGS"
 }

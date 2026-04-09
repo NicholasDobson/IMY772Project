@@ -30,6 +30,9 @@ public class Isolate {
     private String sourceContext;
     private String arCode;
 
+    @Column(columnDefinition = "TEXT")
+    private String virulenceGenes;
+
     // Hibernate 6 mapping for PostgreSQL JSONB
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "binary_typing_profile", columnDefinition = "jsonb")

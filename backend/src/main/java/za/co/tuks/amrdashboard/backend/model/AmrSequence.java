@@ -26,4 +26,10 @@ public class AmrSequence {
     
     private Double identityPercentage;
     private Double coveragePercentage;
+
+    private String sequenceName;
+    private Integer targetLength;
+    private Integer referenceSequenceLength;
+    private Integer alignmentLength;
+    private String accessionClosestSequence;
 }

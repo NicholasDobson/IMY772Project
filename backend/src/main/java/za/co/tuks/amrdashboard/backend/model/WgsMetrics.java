@@ -32,4 +32,6 @@ public class WgsMetrics {
     
     private Integer genomeLength;
     private Integer n50Value;
+
+    private String predictedSirProfile;
 }
