@@ -1,55 +1,116 @@
-/* color palette from <https://github.com/vuejs/theme> */
-:root {
-  --vt-c-white: #ffffff;
-  --vt-c-white-soft: #f8f8f8;
-  --vt-c-white-mute: #f2f2f2;
+/* ═══════════════════════════════════════════════════════
+   AMRWatch — Design Token System
+   Light (default) + Dark via [data-theme="dark"]
+   ═══════════════════════════════════════════════════════ */
 
-  --vt-c-black: #181818;
-  --vt-c-black-soft: #222222;
-  --vt-c-black-mute: #282828;
+/* ── Light Theme ────────────────────────────────────── */
+:root,
+[data-theme="light"] {
+  color-scheme: light;
 
-  --vt-c-indigo: #2c3e50;
+  --c-bg:            #F4F6F8;
+  --c-surface:       #FFFFFF;
+  --c-card:          #FFFFFF;
+  --c-card-hover:    #FAFBFC;
+  --c-sidebar:       #FFFFFF;
+  --c-sidebar-border: #E5E7EB;
 
-  --vt-c-divider-light-1: rgba(60, 60, 60, 0.29);
-  --vt-c-divider-light-2: rgba(60, 60, 60, 0.12);
-  --vt-c-divider-dark-1: rgba(84, 84, 84, 0.65);
-  --vt-c-divider-dark-2: rgba(84, 84, 84, 0.48);
+  --c-border:        #E5E7EB;
+  --c-border-strong: #D1D5DB;
+  --c-shadow:        0 1px 3px rgba(0,0,0,0.06), 0 1px 8px rgba(0,0,0,0.04);
+  --c-shadow-md:     0 2px 8px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
 
-  --vt-c-text-light-1: var(--vt-c-indigo);
-  --vt-c-text-light-2: rgba(60, 60, 60, 0.66);
-  --vt-c-text-dark-1: var(--vt-c-white);
-  --vt-c-text-dark-2: rgba(235, 235, 235, 0.64);
+  --c-text:          #111827;
+  --c-text-muted:    #6B7280;
+  --c-text-dim:      #9CA3AF;
+  --c-heading:       #111827;
+
+  --c-brand:         #2563EB;
+  --c-brand-dim:     rgba(37, 99, 235, 0.08);
+  --c-brand-light:   #EFF6FF;
+
+  --c-nav-active:    #EFF6FF;
+  --c-nav-active-text: #1D4ED8;
+
+  --c-red:           #DC2626;
+  --c-red-dim:       #FEF2F2;
+  --c-red-text:      #991B1B;
+  --c-amber:         #D97706;
+  --c-amber-dim:     #FFFBEB;
+  --c-amber-text:    #92400E;
+  --c-green:         #059669;
+  --c-green-dim:     #ECFDF5;
+  --c-green-text:    #065F46;
+
+  /* Chart specific */
+  --c-chart-blue:    #1565C0;
+  --c-chart-blue-2:  #1976D2;
+  --c-chart-red:     #C62828;
+  --c-chart-red-2:   #E53935;
+  --c-chart-grid:    #F3F4F6;
+  --c-chart-axis:    #9CA3AF;
+  --c-chart-tooltip-bg: #FFFFFF;
+
+  /* Province risk */
+  --c-risk-high:     #DC2626;
+  --c-risk-med:      #EA580C;
+  --c-risk-low:      #16A34A;
 }
 
-/* semantic color variables for this project */
-:root {
-  --color-background: var(--vt-c-white);
-  --color-background-soft: var(--vt-c-white-soft);
-  --color-background-mute: var(--vt-c-white-mute);
+/* ── Dark Theme ─────────────────────────────────────── */
+[data-theme="dark"] {
+  color-scheme: dark;
 
-  --color-border: var(--vt-c-divider-light-2);
-  --color-border-hover: var(--vt-c-divider-light-1);
+  --c-bg:            #0A0F1A;
+  --c-surface:       #0D1520;
+  --c-card:          #101D2E;
+  --c-card-hover:    #132234;
+  --c-sidebar:       #0C1420;
+  --c-sidebar-border: rgba(255,255,255,0.07);
 
-  --color-heading: var(--vt-c-text-light-1);
-  --color-text: var(--vt-c-text-light-1);
+  --c-border:        rgba(255,255,255,0.07);
+  --c-border-strong: rgba(255,255,255,0.13);
+  --c-shadow:        0 1px 3px rgba(0,0,0,0.3), 0 1px 8px rgba(0,0,0,0.2);
+  --c-shadow-md:     0 4px 16px rgba(0,0,0,0.35);
 
-  --section-gap: 160px;
+  --c-text:          #C9D5E2;
+  --c-text-muted:    #5C7A94;
+  --c-text-dim:      #374D61;
+  --c-heading:       #EDF2F7;
+
+  --c-brand:         #3B82F6;
+  --c-brand-dim:     rgba(59, 130, 246, 0.12);
+  --c-brand-light:   rgba(59, 130, 246, 0.15);
+
+  --c-nav-active:    rgba(59, 130, 246, 0.10);
+  --c-nav-active-text: #3B82F6;
+
+  --c-red:           #F87171;
+  --c-red-dim:       rgba(248,113,113,0.12);
+  --c-red-text:      #FCA5A5;
+  --c-amber:         #FBBF24;
+  --c-amber-dim:     rgba(251,191,36,0.12);
+  --c-amber-text:    #FCD34D;
+  --c-green:         #34D399;
+  --c-green-dim:     rgba(52,211,153,0.12);
+  --c-green-text:    #6EE7B7;
+
+  /* Chart specific */
+  --c-chart-blue:    #3B82F6;
+  --c-chart-blue-2:  #60A5FA;
+  --c-chart-red:     #EF4444;
+  --c-chart-red-2:   #F87171;
+  --c-chart-grid:    rgba(255,255,255,0.05);
+  --c-chart-axis:    #4B6174;
+  --c-chart-tooltip-bg: #1A2D42;
+
+  /* Province risk — semantic colours stay intentional */
+  --c-risk-high:     #F87171;
+  --c-risk-med:      #FBBF24;
+  --c-risk-low:      #34D399;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
-
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
-
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
-  }
-}
-
+/* ── Reset ──────────────────────────────────────────── */
 *,
 *::before,
 *::after {
@@ -58,29 +119,25 @@
   font-weight: normal;
 }
 
+html { height: 100%; }
+
 body {
-  min-height: 100vh;
-  color: var(--color-text);
-  background: var(--color-background);
-  transition:
-    color 0.5s,
-    background-color 0.5s;
+  min-height: 100%;
+  color: var(--c-text);
+  background: var(--c-bg);
+  transition: color 0.2s ease, background-color 0.2s ease;
   line-height: 1.6;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    Roboto,
-    Oxygen,
-    Ubuntu,
-    Cantarell,
-    'Fira Sans',
-    'Droid Sans',
-    'Helvetica Neue',
-    sans-serif;
-  font-size: 15px;
+  font-family: 'DM Sans', -apple-system, sans-serif;
+  font-size: 14px;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--c-border-strong); border-radius: 4px; }

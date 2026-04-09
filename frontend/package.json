@@ -18,10 +18,12 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
+    "echarts": "^6.0.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",
     "vue": "^3.5.31",
+    "vue-echarts": "^8.0.1",
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
