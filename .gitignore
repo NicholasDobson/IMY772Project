@@ -1,3 +1,5 @@
 # Environment
 .env
 *.DS_Store
+.claude
+.vscode
