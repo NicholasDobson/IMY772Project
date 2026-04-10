@@ -16,7 +16,9 @@ CREATE TABLE water_samples (
     ph_level DOUBLE PRECISION,
     tds DOUBLE PRECISION,
     ec DOUBLE PRECISION,
-    dissolved_oxygen DOUBLE PRECISION
+    dissolved_oxygen DOUBLE PRECISION,
+    sample_name VARCHAR(255),
+    sample_analysis_type VARCHAR(100)
 );
 
 CREATE TABLE isolates (
@@ -27,7 +29,8 @@ CREATE TABLE isolates (
     organism_identity VARCHAR(255),
     source_context VARCHAR(255),
     ar_code VARCHAR(50),
-    binary_typing_profile JSONB -- Stores the dynamic true/false flags for genes
+    binary_typing_profile JSONB, -- Stores the dynamic true/false flags for genes
+    virulence_genes TEXT
 );
 
 CREATE TABLE amr_sequences (
@@ -38,7 +41,12 @@ CREATE TABLE amr_sequences (
     resistance_class VARCHAR(255),
     resistance_subclass VARCHAR(255),
     identity_percentage DOUBLE PRECISION,
-    coverage_percentage DOUBLE PRECISION
+    coverage_percentage DOUBLE PRECISION,
+    sequence_name VARCHAR(255),
+    target_length INTEGER,
+    reference_sequence_length INTEGER,
+    alignment_length INTEGER,
+    accession_closest_sequence VARCHAR(100)
 );
 
 CREATE TABLE wgs_metrics (
@@ -49,5 +57,6 @@ CREATE TABLE wgs_metrics (
     genotype TEXT,
     plasmid TEXT,
     genome_length INTEGER,
-    n50_value INTEGER
+    n50_value INTEGER,
+    predicted_sir_profile VARCHAR(100)
 );

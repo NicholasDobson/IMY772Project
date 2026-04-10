@@ -64,38 +64,34 @@ public class EtlService {
         String siteId = getCellValueAsString(row.getCell(0));
         if (siteId.isBlank()) return;
 
-        // 1. Fetch or Create Site
         Site site = siteRepository.findById(siteId).orElse(new Site());
         site.setSiteId(siteId);
-        site.setLocationName(getCellValueAsString(row.getCell(1)));
+        site.setLocationName(getCellValueAsString(row.getCell(1))); // Changed to geo_loc_name per video
         site.setRiverName(getCellValueAsString(row.getCell(2)));
         site.setLatitude(getCellValueAsDouble(row.getCell(3)));
         site.setLongitude(getCellValueAsDouble(row.getCell(4)));
         siteRepository.save(site);
 
-        // 2. Fetch or Create Water Sample
         String sampleId = getCellValueAsString(row.getCell(5));
         if (sampleId.isBlank()) return;
 
-        // Assuming you temporarily changed WaterSample ID to String in your model
         WaterSample sample = waterSampleRepository.findById(sampleId).orElse(new WaterSample());
         sample.setSampleId(sampleId);
         sample.setSite(site);
-        sample.setTripIdentifier(getCellValueAsString(row.getCell(6)));
+        sample.setSampleName(getCellValueAsString(row.getCell(6))); // NEW
+        sample.setSampleAnalysisType(getCellValueAsString(row.getCell(7))); // NEW
+        sample.setTripIdentifier(getCellValueAsString(row.getCell(8)));
         
-        // Handle Date safely
-        Cell dateCell = row.getCell(7);
+        Cell dateCell = row.getCell(9);
         if (dateCell != null && dateCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dateCell)) {
-            LocalDate date = dateCell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            sample.setCollectionDate(date);
+            sample.setCollectionDate(dateCell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
         }
 
-        sample.setWaterTemperature(getCellValueAsDouble(row.getCell(8)));
-        sample.setPhLevel(getCellValueAsDouble(row.getCell(9)));
-        sample.setTds(getCellValueAsDouble(row.getCell(10)));
-        sample.setEc(getCellValueAsDouble(row.getCell(11)));
-        sample.setDissolvedOxygen(getCellValueAsDouble(row.getCell(12)));
-        
+        sample.setWaterTemperature(getCellValueAsDouble(row.getCell(10)));
+        sample.setPhLevel(getCellValueAsDouble(row.getCell(11)));
+        sample.setTds(getCellValueAsDouble(row.getCell(12)));
+        sample.setEc(getCellValueAsDouble(row.getCell(13)));
+        sample.setDissolvedOxygen(getCellValueAsDouble(row.getCell(14)));
         waterSampleRepository.save(sample);
     }
 
@@ -107,7 +103,6 @@ public class EtlService {
         String sampleId = getCellValueAsString(row.getCell(0));
         if (sampleId.isBlank()) return;
 
-        // STUB LOGIC: Find existing, or create and save an empty stub WaterSample
         WaterSample sample = waterSampleRepository.findById(sampleId).orElseGet(() -> {
             WaterSample stub = new WaterSample();
             stub.setSampleId(sampleId);
@@ -119,20 +114,19 @@ public class EtlService {
 
         Isolate isolate = isolateRepository.findById(isolateId).orElse(new Isolate());
         isolate.setIsolateId(isolateId);
-        isolate.setWaterSample(sample); // Relational Link to real or stubbed sample!
+        isolate.setWaterSample(sample);
         isolate.setIsolateNumber(getCellValueAsString(row.getCell(2)));
         isolate.setOrganismIdentity(getCellValueAsString(row.getCell(3)));
         isolate.setSourceContext(getCellValueAsString(row.getCell(4)));
         isolate.setArCode(getCellValueAsString(row.getCell(5)));
+        isolate.setVirulenceGenes(getCellValueAsString(row.getCell(6))); // NEW
 
-        // Parse JSONB Binary Profile
         Map<String, Boolean> profile = new HashMap<>();
-        profile.put("Intl1", "1".equals(getCellValueAsString(row.getCell(6))));
-        profile.put("Intl2", "1".equals(getCellValueAsString(row.getCell(7))));
-        profile.put("Intl3", "1".equals(getCellValueAsString(row.getCell(8))));
-        profile.put("TEM", "1".equals(getCellValueAsString(row.getCell(9))));
-        profile.put("SHV", "1".equals(getCellValueAsString(row.getCell(10))));
-        
+        profile.put("Intl1", "1".equals(getCellValueAsString(row.getCell(7))));
+        profile.put("Intl2", "1".equals(getCellValueAsString(row.getCell(8))));
+        profile.put("Intl3", "1".equals(getCellValueAsString(row.getCell(9))));
+        profile.put("TEM", "1".equals(getCellValueAsString(row.getCell(10))));
+        profile.put("SHV", "1".equals(getCellValueAsString(row.getCell(11))));
         isolate.setBinaryTypingProfile(profile);
         isolateRepository.save(isolate);
     }
@@ -145,7 +139,6 @@ public class EtlService {
         String isolateId = getCellValueAsString(row.getCell(0));
         if (isolateId.isBlank()) return;
 
-        // STUB LOGIC: Find existing, or create and save an empty stub Isolate
         Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
             Isolate stub = new Isolate();
             stub.setIsolateId(isolateId);
@@ -153,13 +146,26 @@ public class EtlService {
         });
 
         AmrSequence seq = new AmrSequence();
-        seq.setIsolate(isolate); // Relational Link to real or stubbed isolate!
+        seq.setIsolate(isolate); 
         seq.setGeneSymbol(getCellValueAsString(row.getCell(1)));
-        seq.setElementType(getCellValueAsString(row.getCell(2)));
-        seq.setResistanceClass(getCellValueAsString(row.getCell(3)));
-        seq.setResistanceSubclass(getCellValueAsString(row.getCell(4)));
-        seq.setIdentityPercentage(getCellValueAsDouble(row.getCell(5)));
-        seq.setCoveragePercentage(getCellValueAsDouble(row.getCell(6)));
+        seq.setSequenceName(getCellValueAsString(row.getCell(2))); // NEW
+        seq.setElementType(getCellValueAsString(row.getCell(3)));
+        seq.setResistanceClass(getCellValueAsString(row.getCell(4)));
+        seq.setResistanceSubclass(getCellValueAsString(row.getCell(5)));
+        
+        Double targetLen = getCellValueAsDouble(row.getCell(6)); // NEW
+        if (targetLen != null) seq.setTargetLength(targetLen.intValue());
+        
+        Double refLen = getCellValueAsDouble(row.getCell(7)); // NEW
+        if (refLen != null) seq.setReferenceSequenceLength(refLen.intValue());
+
+        seq.setIdentityPercentage(getCellValueAsDouble(row.getCell(8)));
+        seq.setCoveragePercentage(getCellValueAsDouble(row.getCell(9)));
+        
+        Double alignLen = getCellValueAsDouble(row.getCell(10)); // NEW
+        if (alignLen != null) seq.setAlignmentLength(alignLen.intValue());
+        
+        seq.setAccessionClosestSequence(getCellValueAsString(row.getCell(11))); // NEW
 
         amrSequenceRepository.save(seq);
     }
@@ -172,7 +178,6 @@ public class EtlService {
         String isolateId = getCellValueAsString(row.getCell(0));
         if (isolateId.isBlank()) return;
 
-        // STUB LOGIC: Find existing, or create and save an empty stub Isolate
         Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
             Isolate stub = new Isolate();
             stub.setIsolateId(isolateId);
@@ -180,16 +185,17 @@ public class EtlService {
         });
 
         WgsMetrics metrics = wgsMetricsRepository.findByIsolate_IsolateId(isolateId).orElse(new WgsMetrics());
-        metrics.setIsolate(isolate); // Relational Link to real or stubbed isolate!
+        metrics.setIsolate(isolate);
         metrics.setQualityStatus(getCellValueAsString(row.getCell(1)));
         metrics.setGenotype(getCellValueAsString(row.getCell(2)));
         metrics.setPredictedPhenotype(getCellValueAsString(row.getCell(3)));
-        metrics.setPlasmid(getCellValueAsString(row.getCell(4)));
+        metrics.setPredictedSirProfile(getCellValueAsString(row.getCell(4))); // NEW
+        metrics.setPlasmid(getCellValueAsString(row.getCell(5))); 
         
-        Double genomeLength = getCellValueAsDouble(row.getCell(5));
+        Double genomeLength = getCellValueAsDouble(row.getCell(6));
         if (genomeLength != null) metrics.setGenomeLength(genomeLength.intValue());
         
-        Double n50Value = getCellValueAsDouble(row.getCell(6));
+        Double n50Value = getCellValueAsDouble(row.getCell(7));
         if (n50Value != null) metrics.setN50Value(n50Value.intValue());
 
         wgsMetricsRepository.save(metrics);
