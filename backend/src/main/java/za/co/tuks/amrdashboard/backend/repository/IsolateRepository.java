@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface IsolateRepository extends JpaRepository<Isolate, String> {
     List<Isolate> findByOrganismIdentity(String organismIdentity);
+    List<Isolate> findBySiteId(String siteId);
 }

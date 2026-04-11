@@ -13,8 +13,10 @@ import za.co.tuks.amrdashboard.backend.repository.*;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -55,6 +57,158 @@ public class EtlService {
         }
         log.info("Completed ETL process for file type: {}", fileType);
     }
+    
+    //Nics Tay logic
+    public List<Map<String, Object>> getAllSites() {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Site site : siteRepository.findAll()) {
+            result.add(mapSite(site));
+        }
+        return result;
+    }
+
+    public Map<String, Object> getSiteById(String siteId) {
+        Site site = siteRepository.findById(siteId).orElse(null);
+        return site == null ? null : mapSite(site);
+    }
+
+    public List<Map<String, Object>> getWaterSamplesBySiteId(String siteId, String trip) {
+        List<WaterSample> samples = waterSampleRepository.findBySite_SiteId(siteId);
+        if (trip != null && !trip.isBlank()) {
+            samples = samples.stream().filter(s -> trip.equals(s.getTripIdentifier())).toList();
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (WaterSample s : samples) {
+            result.add(mapWaterSample(s));
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> getIsolatesBySiteId(String siteId) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Isolate i : isolateRepository.findBySiteId(siteId)) {
+            result.add(mapIsolate(i));
+        }
+        return result;
+    }
+
+    // --- Mapping helpers ---
+    private Map<String, Object> mapSite(Site site) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("siteId", site.getSiteId());
+        m.put("locationName", site.getLocationName());
+        m.put("riverName", site.getRiverName());
+        m.put("latitude", site.getLatitude());
+        m.put("longitude", site.getLongitude());
+        return m;
+    }
+
+    private Map<String, Object> mapWaterSample(WaterSample s) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("sampleId", s.getSampleId());
+        m.put("siteId", s.getSite() != null ? s.getSite().getSiteId() : null);
+        m.put("tripIdentifier", s.getTripIdentifier());
+        m.put("collectionDate", s.getCollectionDate() != null ? s.getCollectionDate().toString() : null);
+        m.put("waterTemperature", s.getWaterTemperature());
+        m.put("phLevel", s.getPhLevel());
+        m.put("tds", s.getTds());
+        m.put("ec", s.getEc());
+        m.put("dissolvedOxygen", s.getDissolvedOxygen());
+        return m;
+    }
+
+    private Map<String, Object> mapIsolate(Isolate i) {
+        Map<String, Object> m = new HashMap<>();
+        m.put("isolateId", i.getIsolateId());
+        m.put("sampleId", i.getWaterSample() != null ? i.getWaterSample().getSampleId() : null);
+        m.put("isolateNumber", i.getIsolateNumber());
+        m.put("organismIdentity", i.getOrganismIdentity());
+        m.put("sourceContext", i.getSourceContext());
+        m.put("arCode", i.getArCode());
+        m.put("virulenceGenes", i.getVirulenceGenes());
+        m.put("binaryTypingProfile", i.getBinaryTypingProfile());
+        return m;
+    }
+    /**
+     * Aggregated comparison stats for two sites in one call. Used for the head-to-head metrics table.
+     * @param siteAId Site ID for site A
+     * @param siteBId Site ID for site B
+     * @param trip Optional trip identifier to filter samples
+     * @return List of two objects (one per site) with aggregated stats
+     */
+    public java.util.List<Map<String, Object>> compareAnalytics(String siteAId, String siteBId, String trip) {
+        java.util.List<Map<String, Object>> result = new ArrayList<>();
+        result.add(aggregateSiteStats(siteAId, trip));
+        result.add(aggregateSiteStats(siteBId, trip));
+        return result;
+    }
+
+    private Map<String, Object> aggregateSiteStats(String siteId, String trip) {
+        Map<String, Object> stats = new HashMap<>();
+        Site site = siteRepository.findById(siteId).orElse(null);
+        if (site == null) return stats;
+
+        stats.put("siteId", site.getSiteId());
+        stats.put("locationName", site.getLocationName());
+        stats.put("riverName", site.getRiverName());
+
+        // Get all water samples for this site, filter by trip if provided
+        java.util.List<WaterSample> samples = waterSampleRepository.findBySite_SiteId(siteId);
+        if (trip != null && !trip.isBlank()) {
+            samples = samples.stream().filter(s -> trip.equals(s.getTripIdentifier())).toList();
+        }
+        stats.put("totalSamples", samples.size());
+
+        // Get all isolates for these samples
+        java.util.List<Isolate> isolates = new ArrayList<>();
+        for (WaterSample sample : samples) {
+            if (sample.getIsolates() != null) {
+                isolates.addAll(sample.getIsolates());
+            }
+        }
+        stats.put("totalIsolates", isolates.size());
+
+        // Calculate averages
+        stats.put("avgPh", samples.stream().filter(s -> s.getPhLevel() != null).mapToDouble(WaterSample::getPhLevel).average().orElse(Double.NaN));
+        stats.put("avgTemperature", samples.stream().filter(s -> s.getWaterTemperature() != null).mapToDouble(WaterSample::getWaterTemperature).average().orElse(Double.NaN));
+        stats.put("avgTds", samples.stream().filter(s -> s.getTds() != null).mapToDouble(WaterSample::getTds).average().orElse(Double.NaN));
+        stats.put("avgEc", samples.stream().filter(s -> s.getEc() != null).mapToDouble(WaterSample::getEc).average().orElse(Double.NaN));
+        stats.put("avgDo", samples.stream().filter(s -> s.getDissolvedOxygen() != null).mapToDouble(WaterSample::getDissolvedOxygen).average().orElse(Double.NaN));
+
+        // Intl1 positive rate
+        long intl1Pos = isolates.stream()
+                .filter(i -> i.getBinaryTypingProfile() != null && Boolean.TRUE.equals(i.getBinaryTypingProfile().get("Intl1")))
+                .count();
+        stats.put("intl1PositiveRate", isolates.isEmpty() ? 0.0 : (intl1Pos * 100.0 / isolates.size()));
+
+        // AMR gene hits (total AMR sequences for these isolates)
+        int amrGeneHits = 0;
+        for (Isolate isolate : isolates) {
+            if (isolate.getAmrSequences() != null) {
+                amrGeneHits += isolate.getAmrSequences().size();
+            }
+        }
+        stats.put("amrGeneHits", amrGeneHits);
+
+        // WGS pass rate (WgsMetrics with qualityStatus == "PASS")
+        long wgsTotal = isolates.stream().filter(i -> i.getWgsMetrics() != null).count();
+        long wgsPass = isolates.stream().filter(i -> i.getWgsMetrics() != null && "PASS".equalsIgnoreCase(i.getWgsMetrics().getQualityStatus())).count();
+        stats.put("wgsPassRate", wgsTotal == 0 ? 0.0 : (wgsPass * 100.0 / wgsTotal));
+
+        // Resistant isolates (predictedPhenotype or predictedSirProfile contains "R" or "Resistant")
+        long resistant = isolates.stream().filter(i -> {
+            WgsMetrics wgs = i.getWgsMetrics();
+            if (wgs == null) return false;
+            String pheno = wgs.getPredictedPhenotype();
+            String sir = wgs.getPredictedSirProfile();
+            return (pheno != null && pheno.toLowerCase().contains("r")) || (sir != null && sir.toLowerCase().contains("r"));
+        }).count();
+        stats.put("resistantIsolates", resistant);
+
+        return stats;
+    }
+
+    //
 
     private void parseEpicollect(Row row) {
         // Expected Columns: 
