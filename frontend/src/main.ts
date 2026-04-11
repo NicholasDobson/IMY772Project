@@ -8,6 +8,16 @@ import Aura from '@primeuix/themes/aura'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
 
+/* ── ECharts — register once globally ──────────────────────────
+   Views import VChart directly; they must NOT call use() themselves.
+─────────────────────────────────────────────────────────────── */
+import { use } from 'echarts/core'
+import { CanvasRenderer } from 'echarts/renderers'
+import { BarChart, LineChart } from 'echarts/charts'
+import { GridComponent, TooltipComponent, LegendComponent } from 'echarts/components'
+
+use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent, LegendComponent])
+
 import App from './App.vue'
 import router from './router'
 
