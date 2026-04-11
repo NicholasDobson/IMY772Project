@@ -1,36 +1,40 @@
 <template>
   <div class="map-view-container">
     <div class="filters-panel">
-      <h2>Map Filters</h2>
+      <div class="filters-header">
+        <h2>Map Filters</h2>
+      </div>
       
-      <div class="filter-group">
-        <label>River System</label>
-        <select v-model="selectedFilters.riverName" @change="fetchMarkers">
-          <option value="">All Rivers</option>
-          <option v-for="river in filterOptions.rivers" :key="river" :value="river">
-            {{ river }}
-          </option>
-        </select>
-      </div>
+      <div class="filters-content">
+        <div class="filter-group">
+          <label>River System</label>
+          <select v-model="selectedFilters.riverName" @change="fetchMarkers">
+            <option value="">All Rivers</option>
+            <option v-for="river in filterOptions.rivers" :key="river" :value="river">
+              {{ river }}
+            </option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label>Organism</label>
-        <select v-model="selectedFilters.organism" @change="fetchMarkers">
-          <option value="">All Organisms</option>
-          <option v-for="org in filterOptions.organisms" :key="org" :value="org">
-            {{ org }}
-          </option>
-        </select>
-      </div>
+        <div class="filter-group">
+          <label>Organism</label>
+          <select v-model="selectedFilters.organism" @change="fetchMarkers">
+            <option value="">All Organisms</option>
+            <option v-for="org in filterOptions.organisms" :key="org" :value="org">
+              {{ org }}
+            </option>
+          </select>
+        </div>
 
-      <div class="filter-group">
-        <label>SIR Profile</label>
-        <select v-model="selectedFilters.sirProfile" @change="fetchMarkers">
-          <option value="">All Profiles</option>
-          <option v-for="sir in filterOptions.sirProfiles" :key="sir" :value="sir">
-            {{ sir }}
-          </option>
-        </select>
+        <div class="filter-group">
+          <label>SIR Profile</label>
+          <select v-model="selectedFilters.sirProfile" @change="fetchMarkers">
+            <option value="">All Profiles</option>
+            <option v-for="sir in filterOptions.sirProfiles" :key="sir" :value="sir">
+              {{ sir }}
+            </option>
+          </select>
+        </div>
       </div>
     </div>
 
@@ -55,23 +59,30 @@
 
     <div v-if="siteSummary" class="summary-panel">
       <button class="close-btn" @click="siteSummary = null">✖</button>
-      <h3>{{ siteSummary.locationName }}</h3>
-      <p><strong>River:</strong> {{ siteSummary.riverName }}</p>
-      <p><strong>Total Samples:</strong> {{ siteSummary.totalWaterSamples }}</p>
-      <p><strong>Last Sampled:</strong> {{ siteSummary.lastSampledDate }}</p>
-      
-      <h4>Detected Organisms:</h4>
-      <ul>
-        <li v-for="org in siteSummary.detectedOrganisms" :key="org">{{ org }}</li>
-      </ul>
+      <div class="summary-content">
+        <h3>{{ siteSummary.locationName }}</h3>
+        <div class="summary-detail">
+          <strong>River:</strong> <span>{{ siteSummary.riverName }}</span>
+        </div>
+        <div class="summary-detail">
+          <strong>Total Samples:</strong> <span>{{ siteSummary.totalWaterSamples }}</span>
+        </div>
+        <div class="summary-detail">
+          <strong>Last Sampled:</strong> <span>{{ siteSummary.lastSampledDate }}</span>
+        </div>
+        
+        <h4>Detected Organisms:</h4>
+        <ul class="organisms-list">
+          <li v-for="org in siteSummary.detectedOrganisms" :key="org">
+            <a href="#" @click.prevent="goToBacteriaDetails(org)" class="organism-link">{{ org }}</a>
+          </li>
+        </ul>
 
-      <div class="summary-actions">
-        <button type="button" class="details-btn" @click="goToRiverDetails(siteSummary.siteId)">
-          View River Details
-        </button>
-        <button type="button" class="bacteria-details-btn" @click="viewBacteriaDetails">
-          View Bacteria Details
-        </button>
+        <div class="summary-actions">
+          <button type="button" class="details-btn" @click="goToRiverDetails(siteSummary.siteId)">
+            View River Details
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -147,71 +158,219 @@ async function fetchSiteSummary(siteId: string) {
   }
 }
 
-// Mocked Redirect
+// Navigation functions
 function goToRiverDetails(siteId: string) {
-  alert(`Mock Redirect: In the future, this will navigate to /river-detail/${siteId}`);
-  // Future implementation:
-  // router.push({ name: 'RiverDetail', params: { id: siteId } });
+  router.push({ name: 'river-detail', params: { id: siteId } });
 }
 
-function viewBacteriaDetails() {
-  // Placeholder until bacteria details view is wired up.
+function goToBacteriaDetails(organismName: string) {
+  router.push({ name: 'bacteria', params: { name: organismName } });
 }
 </script>
 
 <style scoped>
 .map-view-container {
   display: flex;
-  height: calc(100vh - 60px); /* Adjust based on your header height */
+  flex-direction: column;
+  height: calc(100vh - 60px);
   position: relative;
+  background: var(--c-bg);
 }
 
 .filters-panel {
-  width: 250px;
-  background: #f8f9fa;
-  padding: 20px;
-  border-right: 1px solid #ddd;
-  z-index: 1000; /* Leaflet tiles have a high z-index, so this needs to be higher */
+  width: 100%;
+  background: var(--c-card);
+  padding: 16px 28px;
+  border-bottom: 1px solid var(--c-border);
+  z-index: 1000;
+  color: var(--c-text);
+}
+
+.filters-header {
+  margin-bottom: 12px;
+  border-bottom: 2px solid var(--c-brand);
+  padding-bottom: 8px;
+}
+
+.filters-header h2 {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-heading);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.filters-content {
+  display: flex;
+  gap: 24px;
+  align-items: flex-end;
 }
 
 .filter-group {
-  margin-bottom: 15px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-group label {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }
 
 .filter-group select {
-  width: 100%;
-  padding: 8px;
-  margin-top: 5px;
+  padding: 8px 12px;
+  background: var(--c-input-bg);
+  color: var(--c-text);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  transition: all 0.2s ease;
+  min-width: 180px;
+}
+
+.filter-group select:hover {
+  border-color: var(--c-brand);
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--c-brand);
+  box-shadow: 0 0 0 3px var(--c-brand-dim);
+}
+
+.filter-group select option {
+  background: var(--c-input-bg);
+  color: var(--c-text);
 }
 
 .map-wrapper {
-  flex-grow: 1;
+  flex: 1;
   width: 100%;
   height: 100%;
 }
 
 .summary-panel {
   position: absolute;
-  top: 20px;
-  right: 50px;
-  width: 300px;
-  background: white;
-  padding: 20px;
+  top: 24px;
+  right: 24px;
+  width: 340px;
+  background: var(--c-card);
+  padding: 0;
   border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  z-index: 1000; /* Keeps it above the map tiles */
+  border: 1px solid var(--c-border);
+  box-shadow: var(--c-shadow-md);
+  z-index: 1000;
+  overflow: hidden;
 }
 
 .close-btn {
-  float: right;
+  position: absolute;
+  top: 12px;
+  right: 12px;
   background: none;
   border: none;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 20px;
+  color: var(--c-text-dim);
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.close-btn:hover {
+  background: var(--c-brand-dim);
+  color: var(--c-text);
+}
+
+.summary-content {
+  padding: 24px;
+  color: var(--c-text);
+}
+
+.summary-content h3 {
+  margin: 0 0 18px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-heading);
+  border-bottom: 2px solid var(--c-brand);
+  padding-bottom: 12px;
+}
+
+.summary-detail {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--c-text);
+}
+
+.summary-detail strong {
+  color: var(--c-text-muted);
+  font-weight: 600;
+}
+
+.summary-detail span {
+  color: var(--c-text);
+  text-align: right;
+  flex: 1;
+  margin-left: 8px;
+}
+
+.summary-content h4 {
+  margin: 18px 0 10px 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--c-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.organisms-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 18px 0;
+}
+
+.organisms-list li {
+  padding: 6px 10px;
+  margin-bottom: 6px;
+  background: var(--c-brand-dim);
+  border-left: 3px solid var(--c-brand);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  color: var(--c-text);
+  border-radius: 3px;
+}
+
+.organism-link {
+  color: var(--c-brand);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.organism-link:hover {
+  color: var(--c-brand-hover);
+  text-decoration: underline;
 }
 
 .summary-actions {
-  margin-top: 15px;
+  margin-top: 18px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -219,29 +378,45 @@ function viewBacteriaDetails() {
 
 .details-btn {
   width: 100%;
-  padding: 10px;
-  background: #007bff;
+  padding: 10px 12px;
+  background: var(--c-brand);
   color: white;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.2s ease;
 }
 
 .details-btn:hover {
-  background: #0056b3;
+  opacity: 0.9;
+  box-shadow: var(--c-shadow-md);
+  transform: translateY(-2px);
 }
 
 .bacteria-details-btn {
   width: 100%;
-  padding: 10px;
-  background: white;
-  color: #007bff;
-  border: 1px solid #007bff;
-  border-radius: 4px;
+  padding: 10px 12px;
+  background: transparent;
+  color: var(--c-brand);
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
   cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  transition: all 0.2s ease;
 }
 
 .bacteria-details-btn:hover {
-  background: #f0f7ff;
+  background: var(--c-brand-dim);
+  border-color: var(--c-brand);
+  color: var(--c-heading);
 }
 </style>
