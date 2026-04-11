@@ -8,6 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import za.co.tuks.amrdashboard.backend.model.FileType;
 import za.co.tuks.amrdashboard.backend.service.EtlService;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/v1/etl")
 @RequiredArgsConstructor

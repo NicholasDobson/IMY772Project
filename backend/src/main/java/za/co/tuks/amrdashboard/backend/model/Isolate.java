@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -27,6 +29,9 @@ public class Isolate {
     private String organismIdentity;
     private String sourceContext;
     private String arCode;
+
+    @Column(columnDefinition = "TEXT")
+    private String virulenceGenes;
 
     // Hibernate 6 mapping for PostgreSQL JSONB
     @JdbcTypeCode(SqlTypes.JSON)

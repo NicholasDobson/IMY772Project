@@ -12,12 +12,11 @@ import java.util.UUID;
 public class WaterSample {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
     @Column(name = "sample_id")
-    private UUID sampleId;
+    private String sampleId;
 
     @ManyToOne
-    @JoinColumn(name = "site_id", nullable = false)
+    @JoinColumn(name = "site_id")
     private Site site;
 
     // AWS Cognito User ID
@@ -36,4 +35,7 @@ public class WaterSample {
 
     @OneToMany(mappedBy = "waterSample", cascade = CascadeType.ALL)
     private List<Isolate> isolates;
+
+    private String sampleName;
+    private String sampleAnalysisType; // e.g., "Metagenomics", "WGS"
 }
