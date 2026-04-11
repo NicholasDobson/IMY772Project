@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ETL Upload Tester</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .form-group { margin-bottom: 15px; }
+        pre { background: #eee; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Upload AMR Dashboard Data</h2>
+
+    <div class="form-group">
+        <label>1. Select File Type:</label><br>
+        <select id="fileTypeInput">
+            <option value="EPICOLLECT">Epicollect (Field Data)</option>
+            <option value="BINARY_INFO">Binary Info (Isolates)</option>
+            <option value="AMR_FINDER">AMR Finder (Gene Sequences)</option>
+            <option value="STAR_AMR">Star AMR (WGS Metrics)</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>2. Select Excel File:</label><br>
+        <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv">
+    </div>
+
+    <button onclick="uploadFile()">Send to Backend</button>
+
+    <h3>Server Response:</h3>
+    <pre id="responseOutput">Waiting for upload...</pre>
+
+    <script>
+        async function uploadFile() {
+            const fileInput = document.getElementById('excelFileInput');
+            const fileType = document.getElementById('fileTypeInput').value;
+            const output = document.getElementById('responseOutput');
+
+            if (fileInput.files.length === 0) {
+                alert('Please select a file first!');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('fileType', fileType);
+
+            output.innerText = "Uploading...";
+
+            try {
+                // Hitting your local Spring Boot backend
+                const response = await fetch('http://localhost:8080/api/v1/etl/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const resultText = await response.text();
+                output.innerText = `Status: ${response.status}\nMessage: ${resultText}`;
+            } catch (error) {
+                output.innerText = `Network Error: ${error.message}\nMake sure Spring Boot is running!`;
+            }
+        }
+    </script>
+</body>
+</html>
