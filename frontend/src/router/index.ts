@@ -34,6 +34,11 @@ const router = createRouter({
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),
     },
+    {
+      path: '/bacteria/:name',
+      name: 'bacteria-detail',
+      component: () => import('../views/BacteriaDetailView.vue'),
+    },
   ],
 })
 
