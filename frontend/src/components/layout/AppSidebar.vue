@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useRoute } from 'vue-router'
+import upLogo from '@/assets/up-logo.png'
 
 const route = useRoute()
 
@@ -21,11 +22,7 @@ function isActive(path: string) {
     <!-- University crest + brand -->
     <div class="sidebar-brand">
       <div class="university-crest">
-        <!-- Simplified University of Pretoria crest SVG -->
-        <svg width="38" height="38" viewBox="0 0 38 38" fill="none">
-          <rect width="38" height="38" rx="6" fill="var(--c-border)"/>
-          <text x="19" y="24" text-anchor="middle" font-size="11" font-weight="700" fill="var(--c-text-muted)" font-family="serif">UP</text>
-        </svg>
+        <img :src="upLogo" alt="University of Pretoria" class="up-logo" />
       </div>
       <div class="amr-logo">
         <svg width="32" height="22" viewBox="0 0 32 22" fill="none">
@@ -95,7 +92,14 @@ function isActive(path: string) {
 
 .university-crest {
   display: flex;
+  justify-content: center;
   align-items: center;
+}
+
+.up-logo {
+  height: 72px;
+  width: auto;
+  object-fit: contain;
 }
 
 .amr-logo {

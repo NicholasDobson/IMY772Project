@@ -13,4 +13,6 @@ public interface IsolateRepository extends JpaRepository<Isolate, String> {
     //Fetch unique organisms for the dropdown filter
     @Query("SELECT DISTINCT i.organismIdentity FROM Isolate i WHERE i.organismIdentity IS NOT NULL")
     List<String> findDistinctOrganisms();
+  
+    List<Isolate> findBySiteId(String siteId);
 }

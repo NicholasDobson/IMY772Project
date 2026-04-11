@@ -21,6 +21,11 @@ const router = createRouter({
       component: () => import('../views/RiverDetailView.vue'),
     },
     {
+      path: '/compare',
+      name: 'compare',
+      component: () => import('../views/ComparisonView.vue'),
+    },
+    {
       path: '/education',
       name: 'education',
       component: () => import('../views/EducationView.vue'),
@@ -39,6 +44,11 @@ const router = createRouter({
       path: '/map',
       name: 'map',
       component: MapView
+    },
+    {
+      path: '/bacteria/:name',
+      name: 'bacteria-detail',
+      component: () => import('../views/BacteriaDetailView.vue'),
     },
   ],
 })
