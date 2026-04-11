@@ -461,71 +461,77 @@ const safetyRating = computed(() => {
 
     <template v-else-if="detail">
 
-      <!-- ── Page header ── -->
+      <!-- ── Page header hero card ── -->
       <header class="page-header">
 
-        <!-- Breadcrumb + compare button row -->
+        <!-- Breadcrumb row -->
         <div class="breadcrumb-row">
           <div class="breadcrumb">
             <span class="crumb-link" @click="$router.push('/map')">Map</span>
             <i class="pi pi-chevron-right crumb-sep"></i>
             <span class="crumb-current">River Detail</span>
           </div>
-          <button class="compare-btn" @click="goToCompare">
-            <i class="pi pi-sliders-h"></i>
-            Compare this site
-          </button>
         </div>
 
-        <!-- Site title + selector side by side -->
-        <div class="title-row" v-click-outside="closeDropdown">
-          <h1 class="page-title">{{ detail.site.locationName }}</h1>
-          <div class="title-selector">
-            <button class="title-selector-btn" @click="dropdownOpen = !dropdownOpen">
-              <i class="pi pi-map-marker"></i>
-              <span>Change site</span>
-              <i class="pi pi-chevron-down title-chevron" :class="{ 'title-chevron--open': dropdownOpen }"></i>
+        <!-- Hero card: site name IS the heading, selector embedded inside -->
+        <div class="site-hero-card" v-click-outside="closeDropdown">
+
+          <!-- Top row: site label + compare button -->
+          <div class="hero-top-row">
+            <span class="hero-site-label">
+              <i class="pi pi-map-marker"></i> Site {{ detail.site.siteId }}
+            </span>
+            <button class="compare-btn" @click="goToCompare">
+              <i class="pi pi-sliders-h"></i>
+              Compare sites
             </button>
-            <div v-if="dropdownOpen" class="selector-dropdown">
-              <div class="selector-search-label">Select Site</div>
-              <div class="selector-search">
-                <i class="pi pi-search search-icon"></i>
-                <input
-                  v-model="searchQuery"
-                  class="search-input"
-                  placeholder="Search by name, river or ID..."
-                  autofocus
-                />
-              </div>
-              <div class="selector-list">
-                <button
-                  v-for="s in filteredSites"
-                  :key="s.siteId"
-                  class="selector-option"
-                  :class="{ 'selector-option--active': s.siteId === selectedSite }"
-                  @click="selectSite(s.siteId)"
-                >
-                  <div class="option-main">
-                    <span class="option-name">{{ s.locationName }}</span>
-                    <span class="option-river">{{ s.riverName }}</span>
-                  </div>
-                  <span class="option-id">{{ s.siteId }}</span>
-                </button>
-                <div v-if="filteredSites.length === 0" class="selector-empty">
-                  No sites match "{{ searchQuery }}"
+          </div>
+
+          <!-- Site name as heading + chevron to open selector -->
+          <button class="hero-name-btn" @click="dropdownOpen = !dropdownOpen">
+            <h1 class="page-title">{{ detail.site.locationName }}</h1>
+            <i class="pi pi-chevron-down hero-chevron" :class="{ 'hero-chevron--open': dropdownOpen }"></i>
+          </button>
+
+          <!-- Inline dropdown -->
+          <div v-if="dropdownOpen" class="hero-dropdown">
+            <div class="selector-search">
+              <i class="pi pi-search search-icon"></i>
+              <input
+                v-model="searchQuery"
+                class="search-input"
+                placeholder="Search by name, river or ID…"
+                autofocus
+              />
+            </div>
+            <div class="selector-list">
+              <button
+                v-for="s in filteredSites"
+                :key="s.siteId"
+                class="selector-option"
+                :class="{ 'selector-option--active': s.siteId === selectedSite }"
+                @click="selectSite(s.siteId)"
+              >
+                <div class="option-main">
+                  <span class="option-name">{{ s.locationName }}</span>
+                  <span class="option-river">{{ s.riverName }}</span>
                 </div>
+                <span class="option-id">{{ s.siteId }}</span>
+              </button>
+              <div v-if="filteredSites.length === 0" class="selector-empty">
+                No sites match "{{ searchQuery }}"
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- Meta pills -->
-        <div class="meta-pills">
-          <span class="pill"><i class="pi pi-map-marker"></i> {{ detail.site.riverName }}</span>
-          <span class="pill"><i class="pi pi-compass"></i> {{ detail.site.latitude }}, {{ detail.site.longitude }}</span>
-          <span class="pill"><i class="pi pi-database"></i> {{ detail.waterSamples.length }} samples</span>
-          <span class="pill"><i class="pi pi-microscope"></i> {{ detail.isolates.length }} isolates</span>
-          <span class="pill pill--id">Site {{ detail.site.siteId }}</span>
+          <!-- Meta pills inside the card -->
+          <div class="meta-pills">
+            <span class="pill"><i class="pi pi-waves"></i> {{ detail.site.riverName }}</span>
+            <span class="pill"><i class="pi pi-compass"></i> {{ detail.site.latitude }}, {{ detail.site.longitude }}</span>
+            <span class="pill"><i class="pi pi-database"></i> {{ detail.waterSamples.length }} samples</span>
+            <span class="pill"><i class="pi pi-microscope"></i> {{ detail.isolates.length }} isolates</span>
+          </div>
+
         </div>
       </header>
 
@@ -819,7 +825,7 @@ const safetyRating = computed(() => {
 .river-detail { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
 
 /* ── Header ── */
-.page-header { margin-bottom: 16px; }
+.page-header { margin-bottom: 20px; }
 
 .breadcrumb-row {
   display: flex; align-items: center; justify-content: space-between;
@@ -831,45 +837,62 @@ const safetyRating = computed(() => {
 .crumb-current { color: var(--c-text-muted); }
 .crumb-sep { font-size: 9px; }
 
-/* Title row — h1 + change-site button side by side */
-.title-row {
-  display: flex; align-items: center; gap: 14px;
-  margin-bottom: 12px; position: relative;
+/* Hero card */
+.site-hero-card {
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-top: 3px solid var(--c-brand);
+  border-radius: 10px;
+  padding: 20px 24px 18px;
+  box-shadow: var(--c-shadow);
+  position: relative;
 }
+
+.hero-top-row {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; margin-bottom: 6px;
+}
+
+.hero-site-label {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.1em; color: var(--c-brand);
+  display: flex; align-items: center; gap: 5px;
+}
+
+/* Clicking the site name opens the dropdown */
+.hero-name-btn {
+  display: flex; align-items: center; gap: 12px;
+  background: none; border: none; padding: 0; cursor: pointer;
+  text-align: left; width: 100%; margin-bottom: 14px;
+}
+.hero-name-btn:hover .page-title { color: var(--c-brand); }
+.hero-name-btn:hover .hero-chevron { color: var(--c-brand); }
+
 .page-title {
-  font-family: 'Zen Dots', sans-serif; font-size: 28px; font-weight: 700;
+  font-family: 'Zen Dots', sans-serif; font-size: 30px; font-weight: 700;
   color: var(--c-heading); margin: 0; line-height: 1.1;
+  transition: color 0.15s;
 }
 
-/* "Change site" button next to the title */
-.title-selector { position: relative; }
-.title-selector-btn {
-  display: flex; align-items: center; gap: 7px;
-  background: var(--c-card); border: 1px solid var(--c-border);
-  border-radius: 8px; padding: 7px 13px;
-  color: var(--c-text-muted); font-family: 'DM Sans', sans-serif; font-size: 12.5px;
-  cursor: pointer; transition: border-color 0.15s, color 0.15s;
-  white-space: nowrap;
+.hero-chevron {
+  font-size: 14px; color: var(--c-text-muted);
+  transition: transform 0.2s, color 0.15s; flex-shrink: 0;
 }
-.title-selector-btn:hover { border-color: var(--c-brand); color: var(--c-brand); }
-.title-selector-btn .pi-map-marker { color: var(--c-brand); font-size: 11px; }
-.title-chevron { font-size: 10px; transition: transform 0.2s; }
-.title-chevron--open { transform: rotate(180deg); }
+.hero-chevron--open { transform: rotate(180deg); }
 
-/* Shared dropdown */
-.selector-dropdown {
-  position: absolute; top: calc(100% + 8px); left: 0;
-  width: 280px; z-index: 100;
-  background: var(--c-card); border: 1px solid var(--c-border);
-  border-radius: 10px; box-shadow: var(--c-shadow-md); overflow: hidden;
+/* Inline dropdown inside the hero card */
+.hero-dropdown {
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
 }
-.selector-search-label {
-  padding: 10px 14px 4px; font-size: 10px; font-weight: 600;
-  text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-muted);
-}
+
+/* Shared dropdown internals */
 .selector-search {
   display: flex; align-items: center; gap: 8px;
-  padding: 6px 12px 10px; border-bottom: 1px solid var(--c-border);
+  padding: 9px 12px; border-bottom: 1px solid var(--c-border);
 }
 .search-icon { font-size: 12px; color: var(--c-text-muted); flex-shrink: 0; }
 .search-input {
@@ -877,7 +900,7 @@ const safetyRating = computed(() => {
   color: var(--c-text); font-family: 'DM Sans', sans-serif; font-size: 13px;
 }
 .search-input::placeholder { color: var(--c-text-muted); }
-.selector-list { max-height: 220px; overflow-y: auto; padding: 4px; }
+.selector-list { max-height: 200px; overflow-y: auto; padding: 4px; }
 .selector-option {
   display: flex; align-items: center; justify-content: space-between;
   width: 100%; padding: 9px 10px; border-radius: 6px; border: none;
@@ -905,7 +928,7 @@ const safetyRating = computed(() => {
 .compare-btn .pi { font-size: 12px; }
 
 .meta-pills { display: flex; flex-wrap: wrap; gap: 7px; }
-.pill { display: flex; align-items: center; gap: 5px; background: var(--c-card); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; font-size: 11.5px; color: var(--c-text-muted); }
+.pill { display: flex; align-items: center; gap: 5px; background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 20px; padding: 3px 10px; font-size: 11.5px; color: var(--c-text-muted); }
 .pill .pi { font-size: 10px; }
 .pill--id { font-family: monospace; color: var(--c-brand); border-color: var(--c-brand); background: var(--c-brand-dim); }
 
