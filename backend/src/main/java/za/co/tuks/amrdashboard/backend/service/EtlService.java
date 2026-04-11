@@ -86,7 +86,7 @@ public class EtlService {
 
     public List<Map<String, Object>> getIsolatesBySiteId(String siteId) {
         List<Map<String, Object>> result = new ArrayList<>();
-        for (Isolate i : isolateRepository.findBySiteId(siteId)) {
+        for (Isolate i : isolateRepository.findByWaterSample_Site_SiteId(siteId)) {
             result.add(mapIsolate(i));
         }
         return result;
