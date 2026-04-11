@@ -1,28 +1,17 @@
 <script setup lang="ts">
 /**
- * ComparisonView.vue
+ * ComparisonView.vue — Backend integrated
  *
- * DATA MODEL (from /mockdata files in repo — source of truth per data.md):
- *
- * Comparison entities = Sites (Epicollect_Metadata.xlsx):
- *   A10 (Pretoria), B26 (Hammanskraal), B27 (Tshwane) — all on Apies River
- *
- * Per-site data available for comparison:
- *   - Water quality per sample: Temp, pH, TDS, EC, DO (Epicollect)
- *   - Isolate organisms and binary typing (Binary_Information)
- *   - AMR gene hits by class (AMRFinderPlus_Results)
- *   - WGS quality, predicted phenotype, SIR profile (StarAMR_Metrics)
- *
- * Comparison filters (per data.md):
- *   - siteA, siteB (required)
- *   - metric filter: incidentRate, waterQuality, etc.
- *   - time period / trip filter
- *
- * NOTE: Photos not in any data file — not included.
- * NOTE: The /analytics/compare endpoint already referenced in design doc is used here.
+ * Endpoints used:
+ *   GET http://localhost:8080/api/v1/etl/sites
+ *     → populates site dropdowns
+ *   GET http://localhost:8080/api/v1/etl/sites/{siteId}/water-samples
+ *     → water quality time-series (called per slot)
+ *   GET http://localhost:8080/api/v1/etl/sites/{siteId}/isolates
+ *     → isolate / binary typing data (called per slot)
  */
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -35,8 +24,9 @@ use([LineChart, BarChart, RadarChart, TooltipComponent, GridComponent, LegendCom
 
 const themeStore = useThemeStore()
 const isDark     = computed(() => themeStore.resolvedTheme === 'dark')
+const route      = useRoute()
 
-// ── Types (matching data.md schema) ───────────────────────────────
+// ── Types ──────────────────────────────────────────────────────────
 interface Site {
   siteId: string; locationName: string; riverName: string
   latitude: number; longitude: number
@@ -53,12 +43,12 @@ interface Isolate {
 }
 interface AmrSequence {
   isolateId: string; geneSymbol: string; elementType: string
-  resistanceClass: string; subclass: string
+  resistanceClass: string; resistanceSubclass: string  // backend: resistanceSubclass
   identityPercentage: number; coveragePercentage: number
 }
 interface WgsMetrics {
   isolateId: string; qualityStatus: string; genotype: string
-  predictedPhenotype: string; sirProfile: string; plasmid: string
+  predictedPhenotype: string; predictedSirProfile: string; plasmid: string  // backend: predictedSirProfile
   genomeLength: number; n50Value: number
 }
 interface SiteData {
@@ -69,85 +59,109 @@ interface SiteData {
   wgsMetrics: WgsMetrics[]
 }
 
-// ── Mock data — exact values from repo /mockdata files ─────────────
-const ALL_SITES: SiteData[] = [
-  {
-    site: { siteId: 'A10', locationName: 'Pretoria',     riverName: 'Apies River', latitude: -25.747, longitude: 28.229 },
-    waterSamples: [
-      { sampleId: 'SAMP-001', siteId: 'A10', tripIdentifier: 'Trip 1', collectionDate: '2025-05-10', waterTemperature: 18.5, phLevel: 7.2, tds: 250, ec: 400, dissolvedOxygen: 6.5 },
-      { sampleId: 'SAMP-004', siteId: 'A10', tripIdentifier: 'Trip 2', collectionDate: '2025-07-15', waterTemperature: 15.3, phLevel: 6.9, tds: 280, ec: 450, dissolvedOxygen: 5.8 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-101', sampleId: 'SAMP-001', organismIdentity: 'Klebsiella pneumoniae', sourceContext: 'Spinach at harvest', virulenceGenes: 'rmpA, iutA', binaryTypingProfile: { Intl1: true, Intl2: false, Intl3: true, TEM: true, SHV: true } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-101', geneSymbol: 'bla', elementType: 'AMR', resistanceClass: 'BETA-LACTAM',  subclass: 'BETA-LACTAM', identityPercentage: 81.36, coveragePercentage: 58.33 },
-      { isolateId: 'ISO-101', geneSymbol: 'erm', elementType: 'AMR', resistanceClass: 'MACROLIDE',    subclass: 'MACROLIDE',   identityPercentage: 87.54, coveragePercentage: 39.76 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-101', qualityStatus: 'Passed', genotype: "aph(3')-Ia, blaCTX-M-14", predictedPhenotype: 'kanamycin, ampicillin, ceftriaxone', sirProfile: 'Resistant', plasmid: 'IncFIB(K)', genomeLength: 5017831, n50Value: 156657 },
-    ],
-  },
-  {
-    site: { siteId: 'B26', locationName: 'Hammanskraal', riverName: 'Apies River', latitude: -25.750, longitude: 28.230 },
-    waterSamples: [
-      { sampleId: 'SAMP-002', siteId: 'B26', tripIdentifier: 'Trip 1', collectionDate: '2025-05-10', waterTemperature: 19.1, phLevel: 7.4, tds: 260, ec: 410, dissolvedOxygen: 6.2 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-102', sampleId: 'SAMP-002', organismIdentity: 'Serratia fonticola', sourceContext: 'Irrigation pivot point', virulenceGenes: null, binaryTypingProfile: { Intl1: false, Intl2: false, Intl3: true, TEM: false, SHV: false } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-102', geneSymbol: 'aac(3)-I', elementType: 'AMR', resistanceClass: 'AMINOGLYCOSIDE', subclass: 'GENTAMICIN', identityPercentage: 98.68, coveragePercentage: 62.00 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-102', qualityStatus: 'Failed', genotype: 'tet(A)', predictedPhenotype: 'tetracycline', sirProfile: 'Intermediate', plasmid: 'Col(BS512)', genomeLength: 6133820, n50Value: 1660 },
-    ],
-  },
-  {
-    site: { siteId: 'B27', locationName: 'Tshwane',      riverName: 'Apies River', latitude: -25.752, longitude: 28.231 },
-    waterSamples: [
-      { sampleId: 'SAMP-003', siteId: 'B27', tripIdentifier: 'Trip 2', collectionDate: '2025-07-15', waterTemperature: 15.3, phLevel: 6.9, tds: 280, ec: 450, dissolvedOxygen: 5.8 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-103', sampleId: 'SAMP-003', organismIdentity: 'Escherichia coli', sourceContext: 'Irrigation pivot point', virulenceGenes: 'eae, bfpA', binaryTypingProfile: { Intl1: true, Intl2: true, Intl3: false, TEM: true, SHV: false } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-103', geneSymbol: 'arsN1', elementType: 'STRESS', resistanceClass: 'METAL', subclass: 'ARSENIC', identityPercentage: 90.86, coveragePercentage: 51.48 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-103', qualityStatus: 'Passed', genotype: 'blaTEM-1B, sul2', predictedPhenotype: 'ampicillin, sulfisoxazole', sirProfile: 'Susceptible', plasmid: 'IncX1', genomeLength: 5025249, n50Value: 125507 },
-    ],
-  },
-]
-
-const route = useRoute()
-
 // ── State ──────────────────────────────────────────────────────────
 const COLORS = ['#3B82F6', '#EF4444'] as const
 
-// Pre-populate Site A from the ?siteA= query param set by the River Detail
-// "Compare this site" button. Falls back to A10 if not provided.
+// Site list for dropdowns — loaded from API
+const siteList = ref<{ siteId: string; locationName: string; riverName: string }[]>([])
+
+// Pre-populate Site A from the ?siteA= query param set by River Detail's
+// "Compare sites" button. Falls back to A10 if not provided.
 const incomingSiteA = (route.query.siteA as string | undefined) ?? 'A10'
-const defaultSiteB  = ALL_SITES.find(s => s.site.siteId !== incomingSiteA)?.site.siteId ?? 'B26'
+const defaultSiteB  = incomingSiteA === 'A10' ? 'B26' : 'A10'
 
 const selectedIds   = ref<[string, string]>([incomingSiteA, defaultSiteB])
 const tripFilterA   = ref<'all' | 'Trip 1' | 'Trip 2'>('all')
 const tripFilterB   = ref<'all' | 'Trip 1' | 'Trip 2'>('all')
 const selWaterParam = ref<keyof WaterSample>('phLevel')
 
-const dataA = computed(() => ALL_SITES.find(s => s.site.siteId === selectedIds.value[0]) ?? null)
-const dataB = computed(() => ALL_SITES.find(s => s.site.siteId === selectedIds.value[1]) ?? null)
+// Per-slot data refs — populated by API calls
+const dataA    = ref<SiteData | null>(null)
+const dataB    = ref<SiteData | null>(null)
+const loadingA = ref(false)
+const loadingB = ref(false)
 
-onMounted(() => {
-  // TODO: replace with real API calls per data.md:
-  // GET /api/sites  — to populate dropdowns
-  // GET /api/analytics/compare?siteA={id}&siteB={id}&metric=incidentRate  — metrics table
-  // GET /api/sites/{siteId}/water-samples  — per-site water quality (×2)
-  // GET /api/sites/{siteId}/isolates       — per-site isolates (×2)
-  // GET /api/sites/{siteId}/amr-sequences  — per-site AMR genes (×2)
+// ── API functions ──────────────────────────────────────────────────
+async function loadSiteList() {
+  try {
+    const res = await fetch('http://localhost:8080/api/v1/etl/sites')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    siteList.value = await res.json()
+  } catch (e) {
+    console.error('Failed to load site list:', e)
+    // Fallback so dropdowns still work if backend is unreachable
+    siteList.value = [
+      { siteId: 'A10', locationName: 'Pretoria',     riverName: 'Apies River' },
+      { siteId: 'B26', locationName: 'Hammanskraal', riverName: 'Apies River' },
+      { siteId: 'B27', locationName: 'Tshwane',      riverName: 'Apies River' },
+    ]
+  }
+}
+
+async function loadSlotData(siteId: string, slot: 0 | 1) {
+  if (slot === 0) loadingA.value = true
+  else            loadingB.value = true
+
+  try {
+    const [samplesRes, isolatesRes] = await Promise.all([
+      fetch(`http://localhost:8080/api/v1/etl/sites/${siteId}/water-samples`),
+      fetch(`http://localhost:8080/api/v1/etl/sites/${siteId}/isolates`),
+    ])
+    if (!samplesRes.ok || !isolatesRes.ok) throw new Error('Slot data fetch failed')
+
+    const waterSamples = await samplesRes.json()
+    const isolatesRaw  = await isolatesRes.json()
+    const siteInfo     = siteList.value.find(s => s.siteId === siteId)
+
+    const slotData: SiteData = {
+      site: {
+        siteId,
+        locationName: siteInfo?.locationName ?? siteId,
+        riverName:    siteInfo?.riverName    ?? '',
+        latitude:     0,
+        longitude:    0,
+      },
+      waterSamples,
+      isolates: isolatesRaw.map((iso: any) => ({
+        ...iso,
+        binaryTypingProfile: {
+          Intl1: iso.binaryTypingProfile?.Intl1 ?? false,
+          Intl2: iso.binaryTypingProfile?.Intl2 ?? false,
+          Intl3: iso.binaryTypingProfile?.Intl3 ?? false,
+          TEM:   iso.binaryTypingProfile?.TEM   ?? false,
+          SHV:   iso.binaryTypingProfile?.SHV   ?? false,
+        },
+      })),
+      // AMR sequences and WGS metrics not yet exposed as site-level endpoints
+      amrSequences: [],
+      wgsMetrics:   [],
+    }
+
+    if (slot === 0) dataA.value = slotData
+    else            dataB.value = slotData
+  } catch (e) {
+    console.error(`Failed to load slot ${slot} data:`, e)
+    if (slot === 0) dataA.value = null
+    else            dataB.value = null
+  } finally {
+    if (slot === 0) loadingA.value = false
+    else            loadingB.value = false
+  }
+}
+
+onMounted(async () => {
+  await loadSiteList()
+  await Promise.all([
+    loadSlotData(selectedIds.value[0], 0),
+    loadSlotData(selectedIds.value[1], 1),
+  ])
 })
 
-// Helpers (moved here from second script block to avoid duplicate declarations)
+// Re-fetch when the user picks a different site in either dropdown
+watch(() => selectedIds.value[0], (newId) => loadSlotData(newId, 0))
+watch(() => selectedIds.value[1], (newId) => loadSlotData(newId, 1))
+
+// ── Helpers ────────────────────────────────────────────────────────
 function sirColor(sir: string): string {
   if (sir === 'Resistant')    return '#EF4444'
   if (sir === 'Intermediate') return '#FBBF24'
@@ -159,7 +173,6 @@ function sirBg(sir: string): string {
   return 'var(--c-green-dim)'
 }
 
-// ── Helpers ────────────────────────────────────────────────────────
 function filteredSamples(data: SiteData | null, slot: 0 | 1 = 0) {
   if (!data) return []
   const tf = slot === 0 ? tripFilterA.value : tripFilterB.value
@@ -173,7 +186,7 @@ function avgWater(data: SiteData | null, key: keyof WaterSample, slot: 0 | 1 = 0
   return +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)
 }
 
-// ── Labels — append trip when same site is selected for both slots ──
+// Labels — append trip when same site is selected for both slots
 const labelA = computed(() => {
   const name = dataA.value?.site.locationName ?? 'A'
   if (selectedIds.value[0] === selectedIds.value[1]) {
@@ -196,7 +209,7 @@ function intl1Rate(data: SiteData | null) {
 
 function resistantCount(data: SiteData | null) {
   if (!data) return 0
-  return data.wgsMetrics.filter(w => w.sirProfile === 'Resistant').length
+  return data.wgsMetrics.filter(w => w.predictedSirProfile === 'Resistant').length
 }
 
 function wgsPassRate(data: SiteData | null) {
@@ -227,13 +240,11 @@ const waterChartOption = computed(() => {
     ...samplesA.map(s => `${s.tripIdentifier}·${s.collectionDate}`),
     ...samplesB.map(s => `${s.tripIdentifier}·${s.collectionDate}`),
   ])).sort()
-
   const getVals = (samples: typeof samplesA) =>
     allDates.map(d => {
       const s = samples.find(s => `${s.tripIdentifier}·${s.collectionDate}` === d)
       return s ? s[selWaterParam.value as keyof WaterSample] : null
     })
-
   return {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
@@ -261,7 +272,6 @@ const amrClassOption = computed(() => {
   ]))
   const cA = getClassCounts(dataA.value)
   const cB = getClassCounts(dataB.value)
-
   return {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
@@ -276,12 +286,11 @@ const amrClassOption = computed(() => {
   }
 })
 
-// Radar: 5 AMR/quality dimensions from actual data
-// Axes: avg pH (0-14), avg Temp (0-35), AMR gene count (0-5), IntI1 rate (0-100), WGS pass rate (0-100)
+// Radar chart
 const radarOption = computed(() => {
-  const toScore = (data: SiteData | null) => [
-    +(((avgWater(data, 'phLevel') ?? 0) / 14) * 100).toFixed(1),
-    +(((avgWater(data, 'dissolvedOxygen') ?? 0) / 14) * 100).toFixed(1),
+  const toScore = (data: SiteData | null, slot: 0 | 1) => [
+    +(((avgWater(data, 'phLevel', slot) ?? 0) / 14) * 100).toFixed(1),
+    +(((avgWater(data, 'dissolvedOxygen', slot) ?? 0) / 14) * 100).toFixed(1),
     +(((data?.amrSequences.length ?? 0) / 5) * 100).toFixed(1),
     +intl1Rate(data).toFixed(1),
     +wgsPassRate(data).toFixed(1),
@@ -306,14 +315,14 @@ const radarOption = computed(() => {
     series: [{
       type: 'radar',
       data: [
-        { name: labelA.value, value: toScore(dataA.value), lineStyle: { color: COLORS[0], width: 2 }, itemStyle: { color: COLORS[0] }, areaStyle: { color: COLORS[0] + '33' } },
-        { name: labelB.value, value: toScore(dataB.value), lineStyle: { color: COLORS[1], width: 2 }, itemStyle: { color: COLORS[1] }, areaStyle: { color: COLORS[1] + '33' } },
+        { name: labelA.value, value: toScore(dataA.value, 0), lineStyle: { color: COLORS[0], width: 2 }, itemStyle: { color: COLORS[0] }, areaStyle: { color: COLORS[0] + '33' } },
+        { name: labelB.value, value: toScore(dataB.value, 1), lineStyle: { color: COLORS[1], width: 2 }, itemStyle: { color: COLORS[1] }, areaStyle: { color: COLORS[1] + '33' } },
       ],
     }],
   }
 })
 
-// Metrics table rows — pulling from all four data sources
+// Metrics table rows
 const metricRows = computed(() => [
   { label: 'River',                a: dataA.value?.site.riverName ?? '—',                             b: dataB.value?.site.riverName ?? '—' },
   { label: 'Location',             a: dataA.value?.site.locationName ?? '—',                          b: dataB.value?.site.locationName ?? '—' },
@@ -356,12 +365,12 @@ const metricRows = computed(() => [
           <span class="hero-slot-label" :style="{ color: COLORS[0] }">
             <i class="pi pi-map-marker"></i> Site A
           </span>
-          <select v-model="selectedIds[0]" class="hero-select" :style="{ '--accent': COLORS[0] }">
-            <option v-for="s in ALL_SITES" :key="s.site.siteId" :value="s.site.siteId">
-              {{ s.site.siteId }} — {{ s.site.locationName }}
+          <select v-model="selectedIds[0]" class="hero-select">
+            <option v-for="s in siteList" :key="s.siteId" :value="s.siteId">
+              {{ s.siteId }} — {{ s.locationName }}
             </option>
           </select>
-          <div class="hero-meta" v-if="dataA">{{ dataA.site.riverName }} · {{ dataA.site.latitude }}, {{ dataA.site.longitude }}</div>
+          <div class="hero-meta" v-if="dataA">{{ dataA.site.riverName }}</div>
           <div class="hero-trip-row">
             <span class="hero-trip-label">Trip</span>
             <div class="trip-tabs">
@@ -393,6 +402,9 @@ const metricRows = computed(() => [
             <span class="mini-val" :style="{ color: COLORS[0] }">{{ wgsPassRate(dataA) }}%</span>
           </div>
         </div>
+        <div class="mini-stats" v-else-if="loadingA">
+          <div class="mini-stat"><span class="mini-label">Loading…</span></div>
+        </div>
       </div>
 
       <!-- VS badge -->
@@ -405,11 +417,11 @@ const metricRows = computed(() => [
             <i class="pi pi-map-marker"></i> Site B
           </span>
           <select v-model="selectedIds[1]" class="hero-select">
-            <option v-for="s in ALL_SITES" :key="s.site.siteId" :value="s.site.siteId">
-              {{ s.site.siteId }} — {{ s.site.locationName }}
+            <option v-for="s in siteList" :key="s.siteId" :value="s.siteId">
+              {{ s.siteId }} — {{ s.locationName }}
             </option>
           </select>
-          <div class="hero-meta" v-if="dataB">{{ dataB.site.riverName }} · {{ dataB.site.latitude }}, {{ dataB.site.longitude }}</div>
+          <div class="hero-meta" v-if="dataB">{{ dataB.site.riverName }}</div>
           <div class="hero-trip-row">
             <span class="hero-trip-label">Trip</span>
             <div class="trip-tabs">
@@ -441,6 +453,9 @@ const metricRows = computed(() => [
             <span class="mini-val" :style="{ color: COLORS[1] }">{{ wgsPassRate(dataB) }}%</span>
           </div>
         </div>
+        <div class="mini-stats" v-else-if="loadingB">
+          <div class="mini-stat"><span class="mini-label">Loading…</span></div>
+        </div>
       </div>
 
     </div>
@@ -456,8 +471,8 @@ const metricRows = computed(() => [
           <thead>
             <tr>
               <th class="metric-col">Metric</th>
-              <th :style="{ color: COLORS[0] }"><span class="th-dot" :style="{ background: COLORS[0] }"></span>{{ dataA?.site.locationName }}</th>
-              <th :style="{ color: COLORS[1] }"><span class="th-dot" :style="{ background: COLORS[1] }"></span>{{ dataB?.site.locationName }}</th>
+              <th :style="{ color: COLORS[0] }"><span class="th-dot" :style="{ background: COLORS[0] }"></span>{{ dataA?.site.locationName ?? labelA }}</th>
+              <th :style="{ color: COLORS[1] }"><span class="th-dot" :style="{ background: COLORS[1] }"></span>{{ dataB?.site.locationName ?? labelB }}</th>
             </tr>
           </thead>
           <tbody>
@@ -530,7 +545,7 @@ const metricRows = computed(() => [
                     <td class="mono dim">{{ wgs.isolateId }}</td>
                     <td><span class="quality-badge" :class="wgs.qualityStatus === 'Passed' ? 'quality--pass' : 'quality--fail'">{{ wgs.qualityStatus }}</span></td>
                     <td class="dim" style="font-size:11px;max-width:160px">{{ wgs.predictedPhenotype }}</td>
-                    <td><span class="sir-badge" :style="{ color: sirColor(wgs.sirProfile), background: sirBg(wgs.sirProfile) }">{{ wgs.sirProfile }}</span></td>
+                    <td><span class="sir-badge" :style="{ color: sirColor(wgs.predictedSirProfile), background: sirBg(wgs.predictedSirProfile) }">{{ wgs.predictedSirProfile }}</span></td>
                     <td class="mono dim" style="font-size:10.5px">{{ wgs.plasmid }}</td>
                   </tr>
                 </tbody>
@@ -577,19 +592,18 @@ const metricRows = computed(() => [
 
 .vs-badge { font-family:'Zen Dots',sans-serif; font-size:15px; font-weight:700; color:var(--c-text-muted); text-align:center; padding:0 18px; }
 
-/* Shared trip tabs (used in hero cards) */
+/* Trip tabs */
 .trip-tabs { display:flex; gap:5px; }
 .trip-tab { padding:5px 11px; border-radius:6px; border:1px solid var(--c-border); background:transparent; color:var(--c-text-muted); font-size:11px; cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif; }
 .trip-tab:hover { background:var(--c-card); color:var(--c-text); }
 .trip-tab--active { font-weight:600; background:var(--c-brand-dim); }
 
-/* Mini stats (shared) */
+/* Mini stats */
 .mini-stats { display:grid; grid-template-columns:1fr 1fr; padding:14px 22px 18px; gap:14px; }
 .mini-stat { display:flex; flex-direction:column; gap:2px; }
 .mini-label { font-size:10px; text-transform:uppercase; letter-spacing:0.07em; color:var(--c-text-muted); }
 .mini-val { font-size:22px; font-weight:700; font-family:'Zen Dots',sans-serif; line-height:1.1; }
 
-/* (keep old col-* classes for any remaining usage) */
 .col-dot { width:10px; height:10px; border-radius:50%; flex-shrink:0; }
 .col-name { font-size:13px; font-weight:600; color:var(--c-heading); }
 .col-sub { font-size:10.5px; color:var(--c-text-muted); margin-top:2px; }
