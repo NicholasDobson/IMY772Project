@@ -14,5 +14,7 @@ public interface IsolateRepository extends JpaRepository<Isolate, String> {
     @Query("SELECT DISTINCT i.organismIdentity FROM Isolate i WHERE i.organismIdentity IS NOT NULL")
     List<String> findDistinctOrganisms();
   
-    List<Isolate> findBySiteId(String siteId);
+    List<Isolate> findByWaterSample_Site_SiteId(String siteId);
+
+    List<Isolate> findByWaterSample_SampleIdIn(List<String> sampleIds);
 }
