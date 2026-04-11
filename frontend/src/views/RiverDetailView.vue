@@ -38,16 +38,27 @@ const selectedSite = ref(siteId.value)
 const searchQuery  = ref('')
 const dropdownOpen = ref(false)
 
-// All available sites for the selector
-// TODO: replace with GET /api/sites when backend is ready
-const ALL_SITES = [
-  { siteId: 'A10', locationName: 'Pretoria',     riverName: 'Apies River' },
-  { siteId: 'B26', locationName: 'Hammanskraal', riverName: 'Apies River' },
-  { siteId: 'B27', locationName: 'Tshwane',      riverName: 'Apies River' },
-]
+// ── Site list for selector — loaded from API ───────────────────────
+const ALL_SITES = ref<{ siteId: string; locationName: string; riverName: string }[]>([])
+
+async function loadAllSites() {
+  try {
+    const res = await fetch('http://localhost:8080/api/v1/etl/sites')
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    ALL_SITES.value = await res.json()
+  } catch (e) {
+    console.error('Failed to load sites list:', e)
+    // Fallback so the selector still works if backend is unreachable
+    ALL_SITES.value = [
+      { siteId: 'A10', locationName: 'Pretoria',     riverName: 'Apies River' },
+      { siteId: 'B26', locationName: 'Hammanskraal', riverName: 'Apies River' },
+      { siteId: 'B27', locationName: 'Tshwane',      riverName: 'Apies River' },
+    ]
+  }
+}
 
 const filteredSites = computed(() =>
-  ALL_SITES.filter(s =>
+  ALL_SITES.value.filter(s =>
     s.locationName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     s.riverName.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
     s.siteId.toLowerCase().includes(searchQuery.value.toLowerCase())
@@ -112,7 +123,7 @@ interface AmrSequence {
   sequenceName: string
   elementType: string
   resistanceClass: string
-  subclass: string
+  resistanceSubclass: string   // backend field name: resistanceSubclass
   identityPercentage: number
   coveragePercentage: number
 }
@@ -122,7 +133,7 @@ interface WgsMetrics {
   qualityStatus: string
   genotype: string
   predictedPhenotype: string
-  sirProfile: string
+  predictedSirProfile: string  // backend field name: predictedSirProfile
   plasmid: string
   genomeLength: number
   n50Value: number
@@ -136,75 +147,60 @@ interface SiteDetail {
   wgsMetrics: WgsMetrics[]
 }
 
-// ── Mock data ──────────────────────────────────────────────────────
-const SITE_DATA: Record<string, SiteDetail | undefined> = {
-  A10: {
-    site: { siteId: 'A10', locationName: 'Pretoria', riverName: 'Apies River', latitude: -25.747, longitude: 28.229 },
-    waterSamples: [
-      { sampleId: 'SAMP-001', siteId: 'A10', tripIdentifier: 'Trip 1', collectionDate: '2025-05-10', waterTemperature: 18.5, phLevel: 7.2, tds: 250, ec: 400, dissolvedOxygen: 6.5 },
-      { sampleId: 'SAMP-004', siteId: 'A10', tripIdentifier: 'Trip 2', collectionDate: '2025-07-15', waterTemperature: 15.3, phLevel: 6.9, tds: 280, ec: 450, dissolvedOxygen: 5.8 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-101', sampleId: 'SAMP-001', isolateNumber: 'TSp1H', organismIdentity: 'Klebsiella pneumoniae', sourceContext: 'Spinach at harvest', arCode: 'B1', virulenceGenes: 'rmpA, iutA', binaryTypingProfile: { Intl1: true, Intl2: false, Intl3: true, TEM: true, SHV: true } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-101', geneSymbol: 'bla',  sequenceName: 'subclass B3 metallo-beta-lactamase', elementType: 'AMR',    resistanceClass: 'BETA-LACTAM', subclass: 'BETA-LACTAM', identityPercentage: 81.36, coveragePercentage: 58.33 },
-      { isolateId: 'ISO-101', geneSymbol: 'erm',  sequenceName: '23S rRNA methyltransferase Erm',    elementType: 'AMR',    resistanceClass: 'MACROLIDE',   subclass: 'MACROLIDE',   identityPercentage: 87.54, coveragePercentage: 39.76 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-101', qualityStatus: 'Passed', genotype: "aph(3')-Ia, blaCTX-M-14", predictedPhenotype: 'kanamycin, ampicillin, ceftriaxone', sirProfile: 'Resistant', plasmid: 'IncFIB(K)', genomeLength: 5017831, n50Value: 156657 },
-    ],
-  },
-  B26: {
-    site: { siteId: 'B26', locationName: 'Hammanskraal', riverName: 'Apies River', latitude: -25.750, longitude: 28.230 },
-    waterSamples: [
-      { sampleId: 'SAMP-002', siteId: 'B26', tripIdentifier: 'Trip 1', collectionDate: '2025-05-10', waterTemperature: 19.1, phLevel: 7.4, tds: 260, ec: 410, dissolvedOxygen: 6.2 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-102', sampleId: 'SAMP-002', isolateNumber: 'Pi1', organismIdentity: 'Serratia fonticola', sourceContext: 'Irrigation pivot point', arCode: 'B26', virulenceGenes: null, binaryTypingProfile: { Intl1: false, Intl2: false, Intl3: true, TEM: false, SHV: false } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-102', geneSymbol: 'aac(3)-I', sequenceName: 'AAC(3)-I aminoglycoside', elementType: 'AMR', resistanceClass: 'AMINOGLYCOSIDE', subclass: 'GENTAMICIN', identityPercentage: 98.68, coveragePercentage: 62.00 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-102', qualityStatus: 'Failed', genotype: 'tet(A)', predictedPhenotype: 'tetracycline', sirProfile: 'Intermediate', plasmid: 'Col(BS512)', genomeLength: 6133820, n50Value: 1660 },
-    ],
-  },
-  B27: {
-    site: { siteId: 'B27', locationName: 'Tshwane', riverName: 'Apies River', latitude: -25.752, longitude: 28.231 },
-    waterSamples: [
-      { sampleId: 'SAMP-003', siteId: 'B27', tripIdentifier: 'Trip 2', collectionDate: '2025-07-15', waterTemperature: 15.3, phLevel: 6.9, tds: 280, ec: 450, dissolvedOxygen: 5.8 },
-    ],
-    isolates: [
-      { isolateId: 'ISO-103', sampleId: 'SAMP-003', isolateNumber: 'Pi2', organismIdentity: 'Escherichia coli', sourceContext: 'Irrigation pivot point', arCode: 'B27', virulenceGenes: 'eae, bfpA', binaryTypingProfile: { Intl1: true, Intl2: true, Intl3: false, TEM: true, SHV: false } },
-    ],
-    amrSequences: [
-      { isolateId: 'ISO-103', geneSymbol: 'arsN1', sequenceName: 'arsinothricin N-acetyltransferase', elementType: 'STRESS', resistanceClass: 'METAL', subclass: 'ARSENIC', identityPercentage: 90.86, coveragePercentage: 51.48 },
-    ],
-    wgsMetrics: [
-      { isolateId: 'ISO-103', qualityStatus: 'Passed', genotype: 'blaTEM-1B, sul2', predictedPhenotype: 'ampicillin, sulfisoxazole', sirProfile: 'Susceptible', plasmid: 'IncX1', genomeLength: 5025249, n50Value: 125507 },
-    ],
-  },
-}
-
 const detail   = ref<SiteDetail | null>(null)
 const selParam = ref<keyof WaterSample>('phLevel')
 
-function loadSite(id: string) {
+// ── Load site data from API ────────────────────────────────────────
+async function loadSite(id: string) {
   loading.value = true
-  // TODO: replace with real API calls:
-  // GET /api/sites/{siteId}
-  // GET /api/sites/{siteId}/water-samples
-  // GET /api/sites/{siteId}/isolates
-  // GET /api/sites/{siteId}/amr-sequences
-  // GET /api/sites/{siteId}/wgs-metrics
-  setTimeout(() => {
-    detail.value = SITE_DATA[id] ?? SITE_DATA['A10'] ?? null
+  detail.value  = null
+  try {
+    const [siteRes, samplesRes, isolatesRes] = await Promise.all([
+      fetch(`http://localhost:8080/api/v1/etl/sites/${id}`),
+      fetch(`http://localhost:8080/api/v1/etl/sites/${id}/water-samples`),
+      fetch(`http://localhost:8080/api/v1/etl/sites/${id}/isolates`),
+    ])
+    if (!siteRes.ok)     throw new Error(`Site fetch failed: ${siteRes.status}`)
+    if (!samplesRes.ok)  throw new Error(`Samples fetch failed: ${samplesRes.status}`)
+    if (!isolatesRes.ok) throw new Error(`Isolates fetch failed: ${isolatesRes.status}`)
+
+    const site         = await siteRes.json()
+    const waterSamples = await samplesRes.json()
+    const isolatesRaw  = await isolatesRes.json()
+
+    // Normalise binaryTypingProfile — backend sends a plain JSON object
+    const isolates = isolatesRaw.map((iso: any) => ({
+      ...iso,
+      binaryTypingProfile: {
+        Intl1: iso.binaryTypingProfile?.Intl1 ?? false,
+        Intl2: iso.binaryTypingProfile?.Intl2 ?? false,
+        Intl3: iso.binaryTypingProfile?.Intl3 ?? false,
+        TEM:   iso.binaryTypingProfile?.TEM   ?? false,
+        SHV:   iso.binaryTypingProfile?.SHV   ?? false,
+      },
+    }))
+
+    // AMR sequences and WGS metrics are not yet exposed as dedicated
+    // site-level endpoints — those sections will show empty states until added.
+    detail.value = {
+      site,
+      waterSamples,
+      isolates,
+      amrSequences: [],
+      wgsMetrics:   [],
+    }
+  } catch (e) {
+    console.error('Failed to load site data:', e)
+    detail.value = null
+  } finally {
     loading.value = false
-  }, 450)
+  }
 }
 
-onMounted(() => loadSite(siteId.value))
+onMounted(async () => {
+  await loadAllSites()
+  loadSite(siteId.value)
+})
 
 watch(siteId, (newId) => {
   selectedSite.value = newId
@@ -290,15 +286,8 @@ const binaryProfileSummary = computed(() => {
 })
 
 // ── Resistance matrix ──────────────────────────────────────────────
-// Built from wgsMetrics.predictedPhenotype (comma-separated antibiotic names)
-// and wgsMetrics.sirProfile, cross-referenced with isolate IDs.
-// Columns = antibiotics found across all isolates at this site
-// Rows    = each isolate
-// Cell    = R (red) / I (amber) / S (green) derived from sirProfile + phenotype membership
 const resistanceMatrix = computed(() => {
   if (!detail.value) return { antibiotics: [], rows: [] }
-
-  // Collect all unique antibiotic names mentioned in predictedPhenotype fields
   const antibioticSet = new Set<string>()
   for (const wgs of detail.value.wgsMetrics) {
     if (wgs.predictedPhenotype) {
@@ -306,25 +295,18 @@ const resistanceMatrix = computed(() => {
     }
   }
   const antibiotics = [...antibioticSet].sort()
-
-  // Build one row per isolate
   const rows = detail.value.isolates.map(iso => {
     const wgs = detail.value!.wgsMetrics.find(w => w.isolateId === iso.isolateId)
     const phenotypeList = wgs?.predictedPhenotype
       ? wgs.predictedPhenotype.split(',').map(a => a.trim())
       : []
-
     const cells = antibiotics.map(ab => {
       if (!wgs) return 'NA'
-      // If this antibiotic appears in the predicted phenotype, use the SIR profile
-      // otherwise the isolate is considered susceptible to this drug
-      if (phenotypeList.includes(ab)) return wgs.sirProfile  // 'Resistant' | 'Intermediate' | 'Susceptible'
+      if (phenotypeList.includes(ab)) return wgs.predictedSirProfile
       return 'Susceptible'
     })
-
     return { isolateId: iso.isolateId, organism: iso.organismIdentity, cells }
   })
-
   return { antibiotics, rows }
 })
 
@@ -370,54 +352,30 @@ function matrixLabel(status: string): string {
 }
 
 // ── Public safety rating ───────────────────────────────────────────
-// Derived entirely from available data — no extra endpoint needed.
-// Logic:
-//   CAUTION  → any isolate has sirProfile === 'Resistant' (MDR bacteria present in water)
-//   ADVISORY → any isolate has sirProfile === 'Intermediate' (reduced susceptibility detected)
-//   LOW RISK → all isolates susceptible, or no WGS data yet
-//
-// We also factor in DO (dissolved oxygen) as a basic water health signal:
-//   DO < 4 mg/L is considered hypoxic and unsafe for contact.
 const safetyRating = computed(() => {
   if (!detail.value) return null
-
-  const wgsResults = detail.value.wgsMetrics
-  const hasResistant    = wgsResults.some(w => w.sirProfile === 'Resistant')
-  const hasIntermediate = wgsResults.some(w => w.sirProfile === 'Intermediate')
-
-  // Check latest dissolved oxygen reading
+  const wgsResults      = detail.value.wgsMetrics
+  const hasResistant    = wgsResults.some(w => w.predictedSirProfile === 'Resistant')
+  const hasIntermediate = wgsResults.some(w => w.predictedSirProfile === 'Intermediate')
   const doValues = detail.value.waterSamples
     .map(s => s.dissolvedOxygen)
     .filter((v): v is number => v !== null)
-  const latestDo = doValues.length ? doValues[doValues.length - 1] : null
-  const lowOxygen = latestDo != null && latestDo < 4
-
-  // Count distinct resistant antibiotic classes as a severity signal
+  const latestDo   = doValues.length ? doValues[doValues.length - 1] : null
+  const lowOxygen  = latestDo != null && latestDo < 4
   const resistantClasses = new Set(
-    detail.value.amrSequences
-      .filter(s => s.elementType === 'AMR')
-      .map(s => s.resistanceClass)
+    detail.value.amrSequences.filter(s => s.elementType === 'AMR').map(s => s.resistanceClass)
   )
   const multidrugResistant = resistantClasses.size >= 2
-
   if (hasResistant && multidrugResistant) {
     return {
-      level: 'HIGH RISK',
-      icon: 'pi-ban',
-      color: 'var(--c-red)',
-      bg: 'var(--c-red-dim)',
-      border: 'var(--c-red)',
+      level: 'HIGH RISK', icon: 'pi-ban', color: 'var(--c-red)', bg: 'var(--c-red-dim)', border: 'var(--c-red)',
       headline: 'Not recommended for recreational water contact.',
       detail: `Multidrug-resistant bacteria have been detected at this site (${resistantClasses.size} resistance classes). Avoid swimming, wading, or contact with this water. Boil or treat water before use.`,
     }
   }
   if (hasResistant || lowOxygen) {
     return {
-      level: 'CAUTION',
-      icon: 'pi-exclamation-triangle',
-      color: 'var(--c-amber)',
-      bg: 'var(--c-amber-dim)',
-      border: 'var(--c-amber)',
+      level: 'CAUTION', icon: 'pi-exclamation-triangle', color: 'var(--c-amber)', bg: 'var(--c-amber-dim)', border: 'var(--c-amber)',
       headline: 'Exercise caution near this water.',
       detail: lowOxygen
         ? `Low dissolved oxygen (${latestDo} mg/L) detected — water quality is reduced. ${hasResistant ? 'Antibiotic-resistant bacteria have also been found at this site.' : ''} Avoid prolonged contact with the water.`
@@ -426,21 +384,13 @@ const safetyRating = computed(() => {
   }
   if (hasIntermediate) {
     return {
-      level: 'LOW ADVISORY',
-      icon: 'pi-info-circle',
-      color: 'var(--c-brand)',
-      bg: 'var(--c-brand-dim)',
-      border: 'var(--c-brand)',
+      level: 'LOW ADVISORY', icon: 'pi-info-circle', color: 'var(--c-brand)', bg: 'var(--c-brand-dim)', border: 'var(--c-brand)',
       headline: 'Generally safe, with minor advisory.',
       detail: 'Bacteria with reduced antibiotic susceptibility have been detected but no confirmed resistant strains. Standard precautions apply — avoid swallowing water and wash hands after contact.',
     }
   }
   return {
-    level: 'LOW RISK',
-    icon: 'pi-check-circle',
-    color: 'var(--c-green)',
-    bg: 'var(--c-green-dim)',
-    border: 'var(--c-green)',
+    level: 'LOW RISK', icon: 'pi-check-circle', color: 'var(--c-green)', bg: 'var(--c-green-dim)', border: 'var(--c-green)',
     headline: 'No significant AMR threat detected at this site.',
     detail: 'Current data shows no antibiotic-resistant bacteria at this location. Standard hygiene practices are still recommended when near river water.',
   }
@@ -654,12 +604,7 @@ const safetyRating = computed(() => {
               <thead>
                 <tr>
                   <th class="matrix-th-isolate">Isolate</th>
-                  <th
-                    v-for="ab in resistanceMatrix.antibiotics"
-                    :key="ab"
-                    class="matrix-th-drug"
-                    :title="ab"
-                  >
+                  <th v-for="ab in resistanceMatrix.antibiotics" :key="ab" class="matrix-th-drug" :title="ab">
                     <span class="drug-label">{{ ab }}</span>
                   </th>
                 </tr>
@@ -671,15 +616,12 @@ const safetyRating = computed(() => {
                     <span class="matrix-organism">{{ row.organism }}</span>
                   </td>
                   <td
-                    v-for="(cell, ci) in row.cells"
-                    :key="ci"
+                    v-for="(cell, ci) in row.cells" :key="ci"
                     class="matrix-cell"
                     :style="{ background: matrixColor(cell) }"
                     :title="`${row.isolateId} — ${resistanceMatrix.antibiotics[ci]}: ${cell}`"
                   >
-                    <span class="matrix-cell-label" :style="{ color: matrixTextColor(cell) }">
-                      {{ matrixLabel(cell) }}
-                    </span>
+                    <span class="matrix-cell-label" :style="{ color: matrixTextColor(cell) }">{{ matrixLabel(cell) }}</span>
                   </td>
                 </tr>
               </tbody>
@@ -740,7 +682,7 @@ const safetyRating = computed(() => {
                 <td class="mono gene-name">{{ seq.geneSymbol }}</td>
                 <td><span class="type-badge" :class="seq.elementType === 'AMR' ? 'type--amr' : 'type--stress'">{{ seq.elementType }}</span></td>
                 <td class="dim">{{ seq.resistanceClass }}</td>
-                <td class="dim">{{ seq.subclass }}</td>
+                <td class="dim">{{ seq.resistanceSubclass }}</td>
                 <td style="text-align:right" class="pct-cell">{{ seq.identityPercentage.toFixed(2) }}%</td>
                 <td style="text-align:right" class="pct-cell">{{ seq.coveragePercentage.toFixed(2) }}%</td>
               </tr>
@@ -770,7 +712,7 @@ const safetyRating = computed(() => {
                 <td><span class="quality-badge" :class="wgs.qualityStatus === 'Passed' ? 'quality--pass' : 'quality--fail'">{{ wgs.qualityStatus }}</span></td>
                 <td class="mono dim genotype-cell">{{ wgs.genotype }}</td>
                 <td class="dim pheno-cell">{{ wgs.predictedPhenotype }}</td>
-                <td><span class="sir-badge" :style="{ color: sirColor(wgs.sirProfile), background: sirBg(wgs.sirProfile) }">{{ wgs.sirProfile }}</span></td>
+                <td><span class="sir-badge" :style="{ color: sirColor(wgs.predictedSirProfile), background: sirBg(wgs.predictedSirProfile) }">{{ wgs.predictedSirProfile }}</span></td>
                 <td class="mono dim">{{ wgs.plasmid }}</td>
                 <td style="text-align:right" class="num-cell">{{ wgs.genomeLength.toLocaleString() }}</td>
                 <td style="text-align:right" class="num-cell">{{ wgs.n50Value.toLocaleString() }}</td>
@@ -815,7 +757,7 @@ const safetyRating = computed(() => {
 
     <div v-else class="error-state">
       <i class="pi pi-exclamation-triangle"></i>
-      <p>Site not found. Check the siteId parameter.</p>
+      <p>Site not found or backend unavailable.</p>
     </div>
 
   </div>
@@ -859,7 +801,6 @@ const safetyRating = computed(() => {
   display: flex; align-items: center; gap: 5px;
 }
 
-/* Clicking the site name opens the dropdown */
 .hero-name-btn {
   display: flex; align-items: center; gap: 12px;
   background: none; border: none; padding: 0; cursor: pointer;
@@ -880,7 +821,6 @@ const safetyRating = computed(() => {
 }
 .hero-chevron--open { transform: rotate(180deg); }
 
-/* Inline dropdown inside the hero card */
 .hero-dropdown {
   background: var(--c-bg);
   border: 1px solid var(--c-border);
@@ -889,7 +829,6 @@ const safetyRating = computed(() => {
   overflow: hidden;
 }
 
-/* Shared dropdown internals */
 .selector-search {
   display: flex; align-items: center; gap: 8px;
   padding: 9px 12px; border-bottom: 1px solid var(--c-border);
@@ -1002,45 +941,15 @@ const safetyRating = computed(() => {
 .mleg--i::before { background: var(--c-amber-dim); border: 1.5px solid var(--c-amber); }
 .mleg--s { color: var(--c-green); }
 .mleg--s::before { background: var(--c-green-dim); border: 1.5px solid var(--c-green); }
-
 .matrix-scroll { overflow-x: auto; }
 .matrix-table { border-collapse: collapse; width: 100%; }
-.matrix-th-isolate {
-  text-align: left; padding: 8px 12px 8px 0;
-  font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--c-text-muted);
-  white-space: nowrap; min-width: 160px;
-  border-bottom: 1px solid var(--c-border);
-}
-.matrix-th-drug {
-  padding: 4px 3px 8px;
-  border-bottom: 1px solid var(--c-border);
-  min-width: 38px;
-}
-.drug-label {
-  display: block;
-  writing-mode: vertical-rl;
-  transform: rotate(180deg);
-  font-size: 10px; font-weight: 600;
-  color: var(--c-text-muted); letter-spacing: 0.04em;
-  white-space: nowrap;
-  max-height: 90px; overflow: hidden;
-}
-.matrix-isolate-cell {
-  padding: 6px 12px 6px 0;
-  border-bottom: 1px solid var(--c-border);
-  vertical-align: middle;
-}
+.matrix-th-isolate { text-align: left; padding: 8px 12px 8px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--c-text-muted); white-space: nowrap; min-width: 160px; border-bottom: 1px solid var(--c-border); }
+.matrix-th-drug { padding: 4px 3px 8px; border-bottom: 1px solid var(--c-border); min-width: 38px; }
+.drug-label { display: block; writing-mode: vertical-rl; transform: rotate(180deg); font-size: 10px; font-weight: 600; color: var(--c-text-muted); letter-spacing: 0.04em; white-space: nowrap; max-height: 90px; overflow: hidden; }
+.matrix-isolate-cell { padding: 6px 12px 6px 0; border-bottom: 1px solid var(--c-border); vertical-align: middle; }
 .matrix-isolate-id { display: block; font-family: monospace; font-size: 11px; color: var(--c-brand); }
 .matrix-organism { display: block; font-size: 10px; color: var(--c-text-muted); font-style: italic; }
-.matrix-cell {
-  padding: 6px 3px;
-  text-align: center;
-  border-bottom: 1px solid var(--c-border);
-  border-left: 1px solid var(--c-border);
-  transition: filter 0.12s;
-  cursor: default;
-}
+.matrix-cell { padding: 6px 3px; text-align: center; border-bottom: 1px solid var(--c-border); border-left: 1px solid var(--c-border); transition: filter 0.12s; cursor: default; }
 .matrix-cell:hover { filter: brightness(1.15); }
 .matrix-cell-label { font-size: 11px; font-weight: 700; }
 
