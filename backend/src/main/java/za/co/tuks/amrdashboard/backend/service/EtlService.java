@@ -30,6 +30,12 @@ public class EtlService {
     private final AmrSequenceRepository amrSequenceRepository;
     private final WgsMetricsRepository wgsMetricsRepository;
 
+    // TODO: SPRINT 2 - Remove this mock map and replace with actual AWS Cognito / User Database lookup
+    private final Map<String, java.util.UUID> mockUserDatabase = Map.of(
+            "jane.doe@tuks.co.za", java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
+            "john.smith@tuks.co.za", java.util.UUID.fromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
+    );
+
     @Transactional
     public void processExcelFile(MultipartFile file, FileType fileType) throws Exception {
         log.info("Starting ETL process for file type: {}", fileType);
@@ -104,6 +110,19 @@ public class EtlService {
         sample.setTds(getCellValueAsDouble(row.getCell(12)));
         sample.setEc(getCellValueAsDouble(row.getCell(13)));
         sample.setDissolvedOxygen(getCellValueAsDouble(row.getCell(14)));
+
+        // Parse the Email for collected_by_user_id (Column 15)
+        String collectorEmail = getCellValueAsString(row.getCell(15)).trim().toLowerCase();
+        if (!collectorEmail.isBlank()) {
+            java.util.UUID userId = mockUserDatabase.get(collectorEmail);
+            if (userId != null) {
+                sample.setCollectedByUserId(userId);
+            } else {
+                // Future enhancement: Throw an exception or log "User email not found in system"
+                System.out.println("Warning: Collector email not found - " + collectorEmail);
+            }
+        }
+        
         waterSampleRepository.save(sample);
     }
 
@@ -140,6 +159,18 @@ public class EtlService {
         profile.put("TEM", "1".equals(getCellValueAsString(row.getCell(10))));
         profile.put("SHV", "1".equals(getCellValueAsString(row.getCell(11))));
         isolate.setBinaryTypingProfile(profile);
+
+        // Parse the Email for owner_id (Column 12)
+        String ownerEmail = getCellValueAsString(row.getCell(12)).trim().toLowerCase();
+        if (!ownerEmail.isBlank()) {
+            java.util.UUID ownerId = mockUserDatabase.get(ownerEmail);
+            if (ownerId != null) {
+                isolate.setOwnerId(ownerId);
+            } else {
+                System.out.println("Warning: Owner email not found - " + ownerEmail);
+            }
+        }
+        
         isolateRepository.save(isolate);
     }
 

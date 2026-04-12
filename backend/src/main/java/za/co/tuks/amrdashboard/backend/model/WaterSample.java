@@ -21,7 +21,7 @@ public class WaterSample {
 
     // AWS Cognito User ID
     @Column(name = "collected_by_user_id")
-    private UUID collectedByUserId;
+    private java.util.UUID collectedByUserId;
 
     private String tripIdentifier;
     private LocalDate collectionDate;
