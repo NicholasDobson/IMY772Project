@@ -39,11 +39,11 @@ export function useChartTheme() {
   }))
 
   /* Chart brand colours */
-  const blue  = computed(() => isDark.value ? '#3B82F6' : '#2563EB')
-  const blueHover = computed(() => isDark.value ? '#60A5FA' : '#1976D2')
-  const red   = computed(() => isDark.value ? '#EF4444' : '#C62828')
-  const redHover  = computed(() => isDark.value ? '#F87171' : '#E53935')
-  const bgBase    = computed(() => isDark.value ? '#0D1520' : '#FFFFFF')
+  const blue = computed(() => (isDark.value ? '#3B82F6' : '#2563EB'))
+  const blueHover = computed(() => (isDark.value ? '#60A5FA' : '#1976D2'))
+  const red = computed(() => (isDark.value ? '#EF4444' : '#C62828'))
+  const redHover = computed(() => (isDark.value ? '#F87171' : '#E53935'))
+  const bgBase = computed(() => (isDark.value ? '#0D1520' : '#FFFFFF'))
 
   return {
     isDark,

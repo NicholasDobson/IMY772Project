@@ -4,9 +4,9 @@ import { useThemeStore, type ThemeMode } from '@/stores/theme'
 const themeStore = useThemeStore()
 
 const options: { value: ThemeMode; label: string; light: string; dark: string }[] = [
-  { value: 'light',  label: 'Light',  light: '#FFFFFF', dark: '#F3F4F6' },
-  { value: 'dark',   label: 'Dark',   light: '#0F172A', dark: '#1E293B' },
-  { value: 'system', label: 'Auto',   light: '#FFFFFF', dark: '#0F172A' },
+  { value: 'light', label: 'Light', light: '#FFFFFF', dark: '#F3F4F6' },
+  { value: 'dark', label: 'Dark', light: '#0F172A', dark: '#1E293B' },
+  { value: 'system', label: 'Auto', light: '#FFFFFF', dark: '#0F172A' },
 ]
 </script>
 
@@ -21,10 +21,7 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
       @click="themeStore.setMode(opt.value)"
     >
       <!-- The palette square -->
-      <span
-        class="swatch"
-        :class="`swatch--${opt.value}`"
-      >
+      <span class="swatch" :class="`swatch--${opt.value}`">
         <!-- Split preview for system, solid for light/dark -->
         <template v-if="opt.value === 'system'">
           <span class="swatch-half swatch-half--left" :style="{ background: opt.light }"></span>
@@ -64,7 +61,9 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
   transition: opacity 0.15s;
 }
 
-.swatch-btn:hover { opacity: 0.8; }
+.swatch-btn:hover {
+  opacity: 0.8;
+}
 
 .swatch {
   position: relative;
@@ -73,7 +72,9 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
   border-radius: 5px;
   overflow: hidden;
   border: 1.5px solid var(--c-border);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s;
   display: flex;
 }
 
@@ -89,8 +90,12 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
   border-radius: 3px;
 }
 
-.swatch--light .swatch-solid { background: #FFFFFF; }
-.swatch--dark  .swatch-solid { background: #0F172A; }
+.swatch--light .swatch-solid {
+  background: #ffffff;
+}
+.swatch--dark .swatch-solid {
+  background: #0f172a;
+}
 
 .swatch-icon {
   position: absolute;
@@ -100,8 +105,12 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
   justify-content: center;
   font-size: 10px;
 }
-.swatch--light .swatch-icon { color: #888; }
-.swatch--dark  .swatch-icon { color: #94A3B8; }
+.swatch--light .swatch-icon {
+  color: #888;
+}
+.swatch--dark .swatch-icon {
+  color: #94a3b8;
+}
 
 /* System half/half */
 .swatch-half {
@@ -109,10 +118,12 @@ const options: { value: ThemeMode; label: string; light: string; dark: string }[
   height: 100%;
 }
 .swatch-half--left {
-  background: #FFFFFF;
+  background: #ffffff;
   border-right: 1px solid var(--c-border);
 }
-.swatch-half--right { background: #0F172A; }
+.swatch-half--right {
+  background: #0f172a;
+}
 
 /* Label */
 .swatch-label {

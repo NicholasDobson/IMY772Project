@@ -14,10 +14,14 @@ import { ORGANISM_DB, DEFAULT_ORGANISM } from '@/data/organisms'
 import type { RiskLevel } from '@/types/amr'
 
 /* ── Setup ───────────────────────────────────────────────────── */
-const route   = useRoute()
-const router  = useRouter()
+const route = useRoute()
+const router = useRouter()
 const visible = ref(false)
-onMounted(() => { setTimeout(() => { visible.value = true }, 60) })
+onMounted(() => {
+  setTimeout(() => {
+    visible.value = true
+  }, 60)
+})
 
 /* ── Chart theme ─────────────────────────────────────────────── */
 const { isDark, tooltipBase, axisLabel, splitLine, axisLine, blue } = useChartTheme()
@@ -25,14 +29,18 @@ const { isDark, tooltipBase, axisLabel, splitLine, axisLine, blue } = useChartTh
 /* ── Organism data ───────────────────────────────────────────── */
 const organismName = computed(() => decodeURIComponent(route.params.name as string))
 // Fallback guarantees organism is always defined; `!` is safe because DEFAULT_ORGANISM is a known key.
-const organism = computed(
-  () => (ORGANISM_DB[organismName.value] ?? ORGANISM_DB[DEFAULT_ORGANISM])!,
-)
+const organism = computed(() => (ORGANISM_DB[organismName.value] ?? ORGANISM_DB[DEFAULT_ORGANISM])!)
 
 /* ── Derived counts ──────────────────────────────────────────── */
-const rCount = computed(() => organism.value.resistanceProfile.filter(a => a.level === 'R').length)
-const iCount = computed(() => organism.value.resistanceProfile.filter(a => a.level === 'I').length)
-const sCount = computed(() => organism.value.resistanceProfile.filter(a => a.level === 'S').length)
+const rCount = computed(
+  () => organism.value.resistanceProfile.filter((a) => a.level === 'R').length,
+)
+const iCount = computed(
+  () => organism.value.resistanceProfile.filter((a) => a.level === 'I').length,
+)
+const sCount = computed(
+  () => organism.value.resistanceProfile.filter((a) => a.level === 'S').length,
+)
 
 const classBreakdown = computed(() => {
   const map: Record<string, number> = {}
@@ -46,7 +54,7 @@ const classBreakdown = computed(() => {
 
 /* ── Colour helpers ──────────────────────────────────────────── */
 function arCodeSeverity(code: string): 'danger' | 'warn' | 'secondary' {
-  if (code === 'CRE' || code === 'VRE')              return 'danger'
+  if (code === 'CRE' || code === 'VRE') return 'danger'
   if (code === 'ESBL' || code === 'MDR' || code === 'MDRO') return 'warn'
   return 'secondary'
 }
@@ -55,40 +63,53 @@ function classSeverity(cls: string): 'danger' | 'warn' | 'secondary' | 'info' | 
   const c = cls.toUpperCase()
   if (c.includes('BETA') || c.includes('CARBAPENEM') || c.includes('GLYCO')) return 'danger'
   if (c.includes('AMINO') || c.includes('QUINOLONE') || c.includes('MULTI')) return 'warn'
-  if (c.includes('TETRA') || c.includes('SULFO') || c.includes('MACRO'))    return 'secondary'
-  if (c.includes('TRIMETH') || c.includes('FOSFO'))                         return 'info'
+  if (c.includes('TETRA') || c.includes('SULFO') || c.includes('MACRO')) return 'secondary'
+  if (c.includes('TRIMETH') || c.includes('FOSFO')) return 'info'
   return 'success'
 }
 
 function riskSeverity(r: RiskLevel): 'danger' | 'warn' | 'success' {
   if (r === 'HIGH') return 'danger'
-  if (r === 'MED')  return 'warn'
+  if (r === 'MED') return 'warn'
   return 'success'
 }
 
 function classBarColor(cls: string): string {
   const c = cls.toUpperCase()
-  if (c.includes('BETA') || c.includes('GLYCO'))       return isDark.value ? '#F87171' : '#DC2626'
-  if (c.includes('AMINO') || c.includes('QUINOLONE'))  return isDark.value ? '#FBBF24' : '#D97706'
-  if (c.includes('MULTI'))                              return isDark.value ? '#A78BFA' : '#7C3AED'
-  if (c.includes('TETRA') || c.includes('SULFO'))      return isDark.value ? '#5C7A94' : '#6B7280'
+  if (c.includes('BETA') || c.includes('GLYCO')) return isDark.value ? '#F87171' : '#DC2626'
+  if (c.includes('AMINO') || c.includes('QUINOLONE')) return isDark.value ? '#FBBF24' : '#D97706'
+  if (c.includes('MULTI')) return isDark.value ? '#A78BFA' : '#7C3AED'
+  if (c.includes('TETRA') || c.includes('SULFO')) return isDark.value ? '#5C7A94' : '#6B7280'
   return isDark.value ? '#34D399' : '#059669'
 }
 
 function trendIcon(t: string): string {
-  if (t === 'up')   return 'pi-arrow-up'
+  if (t === 'up') return 'pi-arrow-up'
   if (t === 'down') return 'pi-arrow-down'
   return 'pi-minus'
 }
 
 function trendClass(t: string): string {
-  if (t === 'up')   return 'trend-danger'
+  if (t === 'up') return 'trend-danger'
   if (t === 'down') return 'trend-success'
   return 'trend-muted'
 }
 
 /* ── ECharts options ─────────────────────────────────────────── */
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const
+const MONTHS = [
+  'Jan',
+  'Feb',
+  'Mar',
+  'Apr',
+  'May',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Oct',
+  'Nov',
+  'Dec',
+] as const
 
 const trendChartOption = computed(() => ({
   backgroundColor: 'transparent',
@@ -122,29 +143,34 @@ const trendChartOption = computed(() => ({
     axisLine: { show: false },
     axisTick: { show: false },
   },
-  series: [{
-    type: 'line' as const,
-    data: organism.value.monthlyTrend,
-    smooth: 0.3,
-    symbol: 'circle',
-    symbolSize: 5,
-    lineStyle: { color: blue.value, width: 2.5 },
-    itemStyle: {
-      color: blue.value,
-      borderColor: isDark.value ? '#0D1520' : '#FFFFFF',
-      borderWidth: 2,
-    },
-    areaStyle: {
-      color: {
-        type: 'linear' as const,
-        x: 0, y: 0, x2: 0, y2: 1,
-        colorStops: [
-          { offset: 0, color: isDark.value ? 'rgba(59,130,246,0.22)' : 'rgba(37,99,235,0.15)' },
-          { offset: 1, color: isDark.value ? 'rgba(59,130,246,0.01)' : 'rgba(37,99,235,0.01)' },
-        ],
+  series: [
+    {
+      type: 'line' as const,
+      data: organism.value.monthlyTrend,
+      smooth: 0.3,
+      symbol: 'circle',
+      symbolSize: 5,
+      lineStyle: { color: blue.value, width: 2.5 },
+      itemStyle: {
+        color: blue.value,
+        borderColor: isDark.value ? '#0D1520' : '#FFFFFF',
+        borderWidth: 2,
+      },
+      areaStyle: {
+        color: {
+          type: 'linear' as const,
+          x: 0,
+          y: 0,
+          x2: 0,
+          y2: 1,
+          colorStops: [
+            { offset: 0, color: isDark.value ? 'rgba(59,130,246,0.22)' : 'rgba(37,99,235,0.15)' },
+            { offset: 1, color: isDark.value ? 'rgba(59,130,246,0.01)' : 'rgba(37,99,235,0.01)' },
+          ],
+        },
       },
     },
-  }],
+  ],
 }))
 
 const classChartOption = computed(() => ({
@@ -153,7 +179,11 @@ const classChartOption = computed(() => ({
   animationDuration: 900,
   animationEasing: 'cubicOut' as const,
   grid: { left: 10, right: 60, top: 8, bottom: 8, containLabel: true },
-  tooltip: { trigger: 'axis' as const, axisPointer: { type: 'none' as const }, ...tooltipBase.value },
+  tooltip: {
+    trigger: 'axis' as const,
+    axisPointer: { type: 'none' as const },
+    ...tooltipBase.value,
+  },
   xAxis: {
     type: 'value' as const,
     axisLabel: { show: false },
@@ -163,36 +193,37 @@ const classChartOption = computed(() => ({
   },
   yAxis: {
     type: 'category' as const,
-    data: classBreakdown.value.map(c => c.name).reverse(),
+    data: classBreakdown.value.map((c) => c.name).reverse(),
     axisTick: { show: false },
     axisLine: { show: false },
     axisLabel: { ...axisLabel.value, fontSize: 10, width: 120, overflow: 'truncate' as const },
   },
-  series: [{
-    type: 'bar' as const,
-    data: classBreakdown.value.map(c => c.count).reverse(),
-    barMaxWidth: 18,
-    itemStyle: {
-      borderRadius: [0, 3, 3, 0],
-      color: (params: { dataIndex: number }) => {
-        const cls = classBreakdown.value.map(c => c.name).reverse()[params.dataIndex] ?? ''
-        return classBarColor(cls)
+  series: [
+    {
+      type: 'bar' as const,
+      data: classBreakdown.value.map((c) => c.count).reverse(),
+      barMaxWidth: 18,
+      itemStyle: {
+        borderRadius: [0, 3, 3, 0],
+        color: (params: { dataIndex: number }) => {
+          const cls = classBreakdown.value.map((c) => c.name).reverse()[params.dataIndex] ?? ''
+          return classBarColor(cls)
+        },
+      },
+      label: {
+        show: true,
+        position: 'right' as const,
+        color: isDark.value ? '#5C7A94' : '#9CA3AF',
+        fontFamily: 'DM Mono, monospace',
+        fontSize: 10,
       },
     },
-    label: {
-      show: true,
-      position: 'right' as const,
-      color: isDark.value ? '#5C7A94' : '#9CA3AF',
-      fontFamily: 'DM Mono, monospace',
-      fontSize: 10,
-    },
-  }],
+  ],
 }))
 </script>
 
 <template>
   <div class="bacteria-detail">
-
     <!-- ── Header ───────────────────────────────────────── -->
     <div class="detail-header">
       <button class="back-btn" @click="router.push('/')">
@@ -202,13 +233,21 @@ const classChartOption = computed(() => ({
 
       <div class="header-identity" :class="{ 'header-identity--visible': visible }">
         <div class="organism-name-row">
-          <h1 class="organism-name"><em>{{ organismName }}</em></h1>
-          <Tag :value="organism.arCode" :severity="arCodeSeverity(organism.arCode)" class="mdro-badge" />
+          <h1 class="organism-name">
+            <em>{{ organismName }}</em>
+          </h1>
+          <Tag
+            :value="organism.arCode"
+            :severity="arCodeSeverity(organism.arCode)"
+            class="mdro-badge"
+          />
         </div>
         <div class="organism-meta">
           <span class="meta-pill gram-pill">{{ organism.gramStain }}</span>
           <span class="meta-pill">Common: {{ organism.commonName }}</span>
-          <span class="meta-pill">Primary gene: <code>{{ organism.topGene }}</code></span>
+          <span class="meta-pill"
+            >Primary gene: <code>{{ organism.topGene }}</code></span
+          >
         </div>
         <p class="organism-desc">{{ organism.description }}</p>
       </div>
@@ -216,7 +255,11 @@ const classChartOption = computed(() => ({
 
     <!-- ── KPI Row ──────────────────────────────────────── -->
     <section class="kpi-row">
-      <div class="kpi-card" :class="{ 'kpi-card--visible': visible }" style="transition-delay: 60ms">
+      <div
+        class="kpi-card"
+        :class="{ 'kpi-card--visible': visible }"
+        style="transition-delay: 60ms"
+      >
         <p class="kpi-label">Total Detections</p>
         <p class="kpi-value">{{ organism.detectionCount.toLocaleString() }}</p>
         <div class="kpi-sub" :class="trendClass(organism.yoyTrend)">
@@ -225,19 +268,31 @@ const classChartOption = computed(() => ({
         </div>
       </div>
 
-      <div class="kpi-card" :class="{ 'kpi-card--visible': visible }" style="transition-delay: 110ms">
+      <div
+        class="kpi-card"
+        :class="{ 'kpi-card--visible': visible }"
+        style="transition-delay: 110ms"
+      >
         <p class="kpi-label">River Sites Affected</p>
         <p class="kpi-value kpi-value--blue">{{ organism.siteCount }}</p>
         <div class="kpi-sub trend-muted"><span>across SA provinces</span></div>
       </div>
 
-      <div class="kpi-card" :class="{ 'kpi-card--visible': visible }" style="transition-delay: 160ms">
+      <div
+        class="kpi-card"
+        :class="{ 'kpi-card--visible': visible }"
+        style="transition-delay: 160ms"
+      >
         <p class="kpi-label">MDRO Rate</p>
         <p class="kpi-value kpi-value--red">{{ organism.resistanceRate }}%</p>
         <div class="kpi-sub trend-muted"><span>of sampled isolates</span></div>
       </div>
 
-      <div class="kpi-card" :class="{ 'kpi-card--visible': visible }" style="transition-delay: 210ms">
+      <div
+        class="kpi-card"
+        :class="{ 'kpi-card--visible': visible }"
+        style="transition-delay: 210ms"
+      >
         <p class="kpi-label">Resistance Profile</p>
         <div class="kpi-ris">
           <span class="ris-pill ris-r">R {{ rCount }}</span>
@@ -277,7 +332,9 @@ const classChartOption = computed(() => ({
     <section class="panel">
       <div class="panel-header-row">
         <h2 class="panel-title">AMR Resistance Genes</h2>
-        <span class="panel-subtitle">AMRFinderPlus · {{ organism.genes.length }} genes detected</span>
+        <span class="panel-subtitle"
+          >AMRFinderPlus · {{ organism.genes.length }} genes detected</span
+        >
       </div>
       <DataTable :value="organism.genes" class="amr-table" size="small">
         <Column field="geneSymbol" header="Gene Symbol">
@@ -305,14 +362,22 @@ const classChartOption = computed(() => ({
             <span class="num-cell">{{ data.occurrenceCount }}</span>
           </template>
         </Column>
-        <Column field="avgIdentityPct" header="Avg Identity %" style="width: 110px; text-align: right">
+        <Column
+          field="avgIdentityPct"
+          header="Avg Identity %"
+          style="width: 110px; text-align: right"
+        >
           <template #body="{ data }">
             <span :class="data.avgIdentityPct >= 99 ? 'identity-high' : 'identity-cell'">
               {{ data.avgIdentityPct.toFixed(1) }}%
             </span>
           </template>
         </Column>
-        <Column field="avgCoveragePct" header="Avg Coverage %" style="width: 110px; text-align: right">
+        <Column
+          field="avgCoveragePct"
+          header="Avg Coverage %"
+          style="width: 110px; text-align: right"
+        >
           <template #body="{ data }">
             <span class="identity-cell">{{ data.avgCoveragePct.toFixed(1) }}%</span>
           </template>
@@ -374,10 +439,14 @@ const classChartOption = computed(() => ({
           <h2 class="panel-title">WGS / Genomic Metrics</h2>
           <span class="panel-subtitle">StarAMR · MLST</span>
         </div>
-        <WgsMetricsPanel :wgs="organism.wgs" :r-count="rCount" :i-count="iCount" :s-count="sCount" />
+        <WgsMetricsPanel
+          :wgs="organism.wgs"
+          :r-count="rCount"
+          :i-count="iCount"
+          :s-count="sCount"
+        />
       </div>
     </section>
-
   </div>
 </template>
 
@@ -412,7 +481,10 @@ const classChartOption = computed(() => ({
   padding: 5px 12px;
   cursor: pointer;
   width: fit-content;
-  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s,
+    border-color 0.15s;
 }
 
 .back-btn:hover {
@@ -421,20 +493,32 @@ const classChartOption = computed(() => ({
   border-color: var(--c-brand);
 }
 
-.back-btn .pi { font-size: 11px; }
+.back-btn .pi {
+  font-size: 11px;
+}
 
 .header-identity {
   opacity: 0;
   transform: translateY(8px);
-  transition: opacity 0.4s ease, transform 0.4s ease;
+  transition:
+    opacity 0.4s ease,
+    transform 0.4s ease;
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.header-identity--visible { opacity: 1; transform: translateY(0); }
+.header-identity--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
-.organism-name-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.organism-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
 
 .organism-name {
   font-family: 'DM Sans', sans-serif;
@@ -445,9 +529,16 @@ const classChartOption = computed(() => ({
   letter-spacing: -0.3px;
 }
 
-.mdro-badge { font-size: 12px !important; padding: 3px 10px !important; }
+.mdro-badge {
+  font-size: 12px !important;
+  padding: 3px 10px !important;
+}
 
-.organism-meta { display: flex; flex-wrap: wrap; gap: 8px; }
+.organism-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
 
 .meta-pill {
   font-size: 11px;
@@ -494,10 +585,15 @@ const classChartOption = computed(() => ({
   box-shadow: var(--c-shadow);
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
 }
 
-.kpi-card--visible { opacity: 1; transform: translateY(0); }
+.kpi-card--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
 
 .kpi-label {
   font-size: 9.5px;
@@ -518,8 +614,12 @@ const classChartOption = computed(() => ({
   margin-bottom: 6px;
 }
 
-.kpi-value--blue { color: var(--c-brand); }
-.kpi-value--red  { color: var(--c-red); }
+.kpi-value--blue {
+  color: var(--c-brand);
+}
+.kpi-value--red {
+  color: var(--c-red);
+}
 
 .kpi-sub {
   display: flex;
@@ -531,13 +631,25 @@ const classChartOption = computed(() => ({
   letter-spacing: 0.06em;
 }
 
-.kpi-sub .pi { font-size: 10px; }
+.kpi-sub .pi {
+  font-size: 10px;
+}
 
-.trend-danger  { color: var(--c-red); }
-.trend-success { color: var(--c-green); }
-.trend-muted   { color: var(--c-text-dim); }
+.trend-danger {
+  color: var(--c-red);
+}
+.trend-success {
+  color: var(--c-green);
+}
+.trend-muted {
+  color: var(--c-text-dim);
+}
 
-.kpi-ris { display: flex; gap: 6px; margin-bottom: 6px; }
+.kpi-ris {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 6px;
+}
 
 .ris-pill {
   font-family: 'DM Mono', monospace;
@@ -547,9 +659,18 @@ const classChartOption = computed(() => ({
   border-radius: 5px;
 }
 
-.ris-r { background: var(--c-red-dim);   color: var(--c-red); }
-.ris-i { background: var(--c-amber-dim); color: var(--c-amber); }
-.ris-s { background: var(--c-green-dim); color: var(--c-green); }
+.ris-r {
+  background: var(--c-red-dim);
+  color: var(--c-red);
+}
+.ris-i {
+  background: var(--c-amber-dim);
+  color: var(--c-amber);
+}
+.ris-s {
+  background: var(--c-green-dim);
+  color: var(--c-green);
+}
 
 /* ── Panels ────────────────────────────────────────── */
 .panel {
@@ -591,19 +712,40 @@ const classChartOption = computed(() => ({
   gap: 14px;
 }
 
-.chart-main    { height: 210px; width: 100%; }
-.chart-classes { height: 210px; width: 100%; }
+.chart-main {
+  height: 210px;
+  width: 100%;
+}
+.chart-classes {
+  height: 210px;
+  width: 100%;
+}
 
 /* ── Resistance legend ─────────────────────────────── */
-.profile-legend { display: flex; gap: 14px; }
+.profile-legend {
+  display: flex;
+  gap: 14px;
+}
 
-.legend-dot { font-size: 10.5px; font-weight: 600; letter-spacing: 0.04em; }
-.legend-r { color: var(--c-red); }
-.legend-i { color: var(--c-amber); }
-.legend-s { color: var(--c-green); }
+.legend-dot {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.legend-r {
+  color: var(--c-red);
+}
+.legend-i {
+  color: var(--c-amber);
+}
+.legend-s {
+  color: var(--c-green);
+}
 
 /* ── AMR Genes Table ───────────────────────────────── */
-.amr-table { font-family: 'DM Sans', sans-serif; }
+.amr-table {
+  font-family: 'DM Sans', sans-serif;
+}
 
 .gene-name {
   font-family: 'DM Mono', 'JetBrains Mono', monospace;
@@ -688,13 +830,23 @@ const classChartOption = computed(() => ({
 
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 1100px) {
-  .kpi-row    { grid-template-columns: repeat(2, 1fr); }
-  .charts-row { grid-template-columns: 1fr; }
-  .bottom-row { grid-template-columns: 1fr; }
+  .kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+  .bottom-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 640px) {
-  .bacteria-detail { padding: 0 14px 32px; }
-  .kpi-row { grid-template-columns: 1fr 1fr; }
+  .bacteria-detail {
+    padding: 0 14px 32px;
+  }
+  .kpi-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>

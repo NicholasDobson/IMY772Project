@@ -45,11 +45,19 @@ withDefaults(defineProps<Props>(), {
   box-shadow: var(--c-shadow);
   opacity: 0;
   transform: translateY(10px);
-  transition: opacity 0.35s ease, transform 0.35s ease, box-shadow 0.2s;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    box-shadow 0.2s;
 }
 
-.stat-card--visible { opacity: 1; transform: translateY(0); }
-.stat-card:hover { box-shadow: var(--c-shadow-md); }
+.stat-card--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+.stat-card:hover {
+  box-shadow: var(--c-shadow-md);
+}
 
 .stat-label {
   font-size: 9.5px;
@@ -72,7 +80,9 @@ withDefaults(defineProps<Props>(), {
 }
 
 /* Value colour modifiers — applied from parent via :valueClass */
-:global(.value-blue) { color: var(--c-brand) !important; }
+:global(.value-blue) {
+  color: var(--c-brand) !important;
+}
 
 .stat-trend {
   display: flex;
@@ -84,10 +94,18 @@ withDefaults(defineProps<Props>(), {
   letter-spacing: 0.06em;
 }
 
-.stat-trend .pi { font-size: 10px; }
+.stat-trend .pi {
+  font-size: 10px;
+}
 
 /* Trend colour classes — used by parent via :trendClass */
-:global(.trend-danger)  { color: var(--c-red); }
-:global(.trend-success) { color: var(--c-green); }
-:global(.trend-muted)   { color: var(--c-text-dim); }
+:global(.trend-danger) {
+  color: var(--c-red);
+}
+:global(.trend-success) {
+  color: var(--c-green);
+}
+:global(.trend-muted) {
+  color: var(--c-text-dim);
+}
 </style>

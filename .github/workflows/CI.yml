@@ -6,299 +6,122 @@ on:
   pull_request:
     branches: [main, Dev]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-
-  lint:
-    name: Lint Code
+  backend-test:
+    name: Backend Tests
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/Dev'
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      # Run Super-Linter with output to JSON format
-      # Run Super-Linter with direct output capture
-      - name: Run Super Linter
-        id: linter
-        uses: github/super-linter@v5
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE22: true
-          VALIDATE_JAVA: true 
-          VALIDATE_TYPESCRIPT: true
-          VALIDATE_JAVASCRIPT: true
-          VALIDATE_CSS: true
-          VALIDATE_HTML: true
-          VALIDATE_ALL_CODEBASE: true
-          DEFAULT_BRANCH: Dev
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Use the API ESLint config for API JS files (enforces semicolons)
-          ESLINT_CONFIG_FILE_API: ./API/.eslintrc.json
-          # Use the frontend ESLint config for TS/TSX/Cypress files
-          ESLINT_CONFIG_FILE_FRONTEND: ./frontend/.eslintrc.json
-          FILTER_REGEX_EXCLUDE: ".*node_modules/.*"
-          # Enable debuggable output
-          LOG_LEVEL: ERROR
-          # Continue even when finding errors to see all errors
-          DISABLE_ERRORS: true
-  
-  test-backend:
-    name: Backend Tests (Unit, Integration)
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java for backend build
+      - name: Set up Java 21
         uses: actions/setup-java@v4
         with:
+          distribution: temurin
           java-version: '21'
-          distribution: 'temurin'
-          cache: 'maven'
+          cache: maven
 
-      # - name: Build Backend
-      #   working-directory: ./backend
-      #   run: ./mvnw clean package -DskipTests
+      - name: Run backend tests
+        working-directory: ./backend
+        run: ./mvnw -B -ntp clean test
 
-      # - name: Run Java tests
-      #   working-directory: ./backend
-      #   run: ./mvnw test
+      - name: Upload backend test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/target/surefire-reports/
+          if-no-files-found: ignore
 
-      # - name: Upload test reports
-      #   if: always()
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: backend-test-reports
-      #     path: backend/target/surefire-reports/
-
-  test-ui:
-    name: UI Tests (Component & E2E)
+  frontend-check:
+    name: Frontend Lint, Type Check, Unit Tests, Build
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: '22' 
-          cache: 'npm'
-          cache-dependency-path: |
-            ./frontend/package-lock.json
-  
-      # Add caching for dependencies to speed up workflow      
-      - name: Install UI dependencies
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
         working-directory: ./frontend
-        run: |
-          npm install
-          echo "Frontend dependencies installed successfully"
-          npm run test:unit
-          echo "Unit tests completed successfully"
-      # need to double check and fix the e2e tests of the workflow and look for missing dependencies
-      # - name: Run E2E tests
-      #   working-directory: ./frontend
-      #   run: |
-      #     npx playwright install
-      #     npm run build
-      #     npm run test:e2e
-      #     echo "E2E tests completed successfully"
-          
-  # build:
-  #   name: Build Project
-  #   needs: [test-ui, test-backend]
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-  #     - name: Setup Node.js for builds
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '22'
-  #         cache: 'npm'
-  #         cache-dependency-path: |
-  #           ./frontend/package-lock.json
-  #           ./API/package-lock.json
-            
-  #     # First build the API since the frontend depends on it
-  #     - name: Build API
-  #       working-directory: ./backend
-      # - name: Build Backend
-      #   working-directory: ./backend
-      #   run: ./mvnw clean package -DskipTests
-          
-  #         # Test backend startup to verify build
-  #         echo "Testing backend startup..."
-  #         ./mvnw spring-boot:run &
-  #         BACKEND_PID=$!
-  #         sleep 5
-          
-  #         # Check if backend is running
-  #         if ps -p $BACKEND_PID > /dev/null; then
-  #           echo "Backend build and startup successful"
-  #           kill $BACKEND_PID  # Stop the backend process
-  #         else
-  #           echo "Backend startup failed"
-  #           exit 1
-  #         fi
-          
-  #         echo "Backend build completed successfully"
-          
-  #     # Then build the frontend after the backend is built
-  #     - name: Build Frontend
-  #       working-directory: ./frontend
-  #       run: |
-  #         echo "===== BUILDING FRONTEND APPLICATION ====="
-  #         npm install
-          
-  #         # Disable ESLint plugin during build to prevent warnings from failing the build
-  #         # This approach preserves the warnings output but doesn't fail the build
-  #         echo "Starting production build with ESLint checks disabled..."
-  #         DISABLE_ESLINT_PLUGIN=true CI=false npm run build
-          
-  #         echo "Frontend build completed successfully"
-  #         echo "Build size: $(du -sh build | cut -f1)"
- 
-  #         # Create deployment package for local use
-  #         echo "Creating deployment package..."
-  #         mkdir -p deployment_package
-          
-  #         # Copy Java files
-  #         echo "Copying model files to deployment package..."
-  #         java_files=$(find . -maxdepth 1 -name "*.java" | wc -l)
-  #         if [ "$java_files" -gt 0 ]; then
-  #           cp *.java deployment_package/
-  #           echo "Copied $java_files Java files to deployment package"
-  #         else
-  #           echo "WARNING: No Java files found to copy"
-  #         fi
-          
-  #         # Create a basic configuration file for local deployment
-  #         echo "Creating configuration file..."
-  #         cat > deployment_package/config.json << EOF
-  #         EOF
-  
-  #     - name: Verify build artifacts
-  #       run: |
-  #         echo "===== VERIFYING BUILD ARTIFACTS ====="
-          
-  #         # Check backend build
-  #         if [ -d "backend/target" ]; then
-  #           echo "Backend build successful"
-  #           echo "   Key backend files:"
-  #           find backend/src -type f -name "*.java" | head -10
-  #           echo "   Total backend files: $(find backend/src -type f -name "*.java" | wc -l)"
-  #         else
-  #           echo "Backend build failed"
-  #           exit 1
-  #         fi
-          
-  #         # Check frontend build
-  #         if [ -d "frontend/build" ]; then
-  #           echo "Frontend build successful"
-  #           echo "   Files in build directory:"
-  #           find frontend/build -type f | grep -v "node_modules" | sort | head -10
-  #           echo "   Total files: $(find frontend/build -type f | wc -l)"
-  #         else
-  #           echo "Frontend build failed"
-  #           exit 1
-  #         fi
-          
-  #         # Check AI Model deployment package
-  #         if [ -d "AI_Model_BB/Code/deployment_package" ]; then
-  #           echo "AI Model deployment package created"
-  #           echo "   Files in deployment package:"
-  #           ls -la AI_Model_BB/Code/deployment_package/
-  #         else
-  #           echo "AI Model deployment package failed"
-  #           exit 1
-  #         fi
-          
-  #         echo "All build artifacts verified successfully!"
-  #         echo "Backend, Frontend, and AI Model components are ready for local deployment."
-  #         echo "Frontend and AI Model components are ready for local deployment."
-
-  # security-scan:
-  #   name: Security Scan (API keys, Audits,...)
-  #   runs-on: ubuntu-latest
-  #   needs: [lint]
-  #   steps:
-  #     - name: Checkout repository
-  #       uses: actions/checkout@v4
-
-
-  #     - name: Run npm audit for Frontend
-  #       working-directory: ./frontend
-  #       timeout-minutes: 3
-  #       run: |
-  #         echo "Running npm audit for Frontend..."
-  #         npm install --no-fund --no-audit
-  #         npm audit --audit-level=moderate || echo "Security vulnerabilities found in Frontend dependencies"
-          
-  #     - name: Set up Java for security scan
-  #       uses: actions/setup-java@v4
-  #       with:
-  #         distribution: 'temurin'
-  #         java-version: '21'
-  #         cache: maven
-
-  #     # - name: Run Java security scan # MAVEN INSTALLATION takes too long for github drivers!
-  #     #   working-directory: ./backend
-  #     #   timeout-minutes: 5
-  #     #   run: |
-  #     #     echo "Running Java security checks for backend..."
-  #     #     ./mvnw -v
-  #     #     echo "Running OWASP Dependency-Check..."
-  #     #     ./mvnw org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7 || echo "Vulnerabilities found in dependencies"
-  #     #     echo "Running SpotBugs security analysis..."
-  #     #     ./mvnw com.github.spotbugs:spotbugs-maven-plugin:spotbugs || echo "Potential issues found in code"
-  #     #     echo "Security scan completed."
-
-  #     # COMMENTING OUT THE REST IN THE MEAN TIME
-
-  #     # - name: Enhanced secret detection
-  #     #   timeout-minutes: 2
-  #     #   run: |
-  #     #     echo "Running enhanced secret detection..."
-          
-  #     #     # Check for secrets in JavaScript/TypeScript files
-  #     #     echo "Checking JS/TS files for potential secrets..."
-  #     #     grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.js" --include="*.ts" --exclude-dir="node_modules" --exclude-dir=".git" . | \
-  #     #       grep -v "PASSWORD_PLACEHOLDER\|SECRET_PLACEHOLDER\|process.env\|.test.js\|.test.ts" || echo "No obvious JS/TS secrets found"
-          
-  #     #     # Check for secrets in Python files
-  #     #     echo "Checking Python files for potential secrets..."
-  #     #     grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.py" --exclude-dir="__pycache__" --exclude-dir=".git" . | \
-  #     #       grep -v "PASSWORD\|SECRET\|os.environ\|os.getenv\|test" || echo "No obvious Python secrets found"
-          
-  #     #     # Check for secrets in configuration files
-  #     #     echo "Checking configuration files for potential secrets..."
-  #     #     grep -r -i -l "password\|secret\|key\|token\|auth" --include="*.json" --include="*.yml" --include="*.yaml" --include="*.xml" --exclude-dir="node_modules" --exclude-dir=".git" . | \
-  #     #       grep -v "PASSWORD\|SECRET\|\${\|node_modules" || echo "No obvious secrets found in config files"
+        run: npm ci
       
-  #     # - name: Check for vulnerable dependencies
-  #     #   run: |
-  #     #     echo "Checking for commonly known vulnerable dependencies..."
-          
-  #     #     # Check for specific vulnerable packages in package.json files
-  #     #     echo "Checking JavaScript dependencies..."
-  #     #     find . -name "package.json" -not -path "*/node_modules/*" -exec grep -l "minimist\|lodash\|jquery\|socket.io\|ws\|express\|axios" {} \; || echo "No commonly scrutinized JS packages found"
-          
-  #     #     # Check for specific vulnerable packages in requirements.txt
-  #     #     echo "Checking Python dependencies..."
-  #     #     find . -name "requirements.txt" -exec grep -l "django\|flask\|numpy\|tensorflow\|torch\|cryptography\|requests" {} \; || echo "No commonly scrutinized Python packages found"
-      
-  #     # - name: Code quality security scan
-  #     #   run: |
-  #     #     echo "Checking for potential security anti-patterns in code..."
-          
-  #     #     # Check for eval in JS files (potential security risk)
-  #     #     echo "Checking for eval() usage in JS/TS files..."
-  #     #     grep -r -i "eval(" --include="*.js" --include="*.ts" --exclude-dir="node_modules" --exclude-dir=".git" . || echo "No eval() found in JS/TS files"
-          
-  #     #     # Check for exec in Python (potential security risk)
-  #     #     echo "Checking for exec() usage in Python files..."
-  #     #     grep -r -i "exec(" --include="*.py" --exclude-dir="__pycache__" --exclude-dir=".git" . || echo "No exec() found in Python files"
-          
-  #     #     # Check for SQL injection vulnerabilities
-  #     #     echo "Checking for potential SQL injection patterns..."
-  #     #     grep -r -i "db.query\|connection.query\|execute(" --include="*.js" --include="*.py" --exclude-dir="node_modules" --exclude-dir="__pycache__" --exclude-dir=".git" . || echo "No obvious SQL query patterns found"
+      # INSANELY STRICT LINTING AND TYPE CHECKING 
+      # BEING A PAIN TO FIX when small lint errors pop up, but will ensure high code quality and consistency
+
+      - name: Run frontend lint
+        working-directory: ./frontend
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run frontend type check
+        working-directory: ./frontend
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: Run frontend unit tests
+        working-directory: ./frontend
+        run: npm run test:unit -- --run
+
+      - name: Build frontend
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Upload frontend build artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist/
+          if-no-files-found: ignore
+
+  frontend-e2e:
+    name: Frontend E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: frontend-check
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22.12.0'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: ./frontend
+        run: npm ci
+
+      - name: Install Playwright browsers
+        working-directory: ./frontend
+        run: npx playwright install --with-deps chromium
+
+      - name: Build frontend for E2E
+        working-directory: ./frontend
+        run: npm run build
+
+      - name: Run frontend E2E tests
+        working-directory: ./frontend
+        run: npm run test:e2e -- --project=chromium
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/
+          if-no-files-found: ignore

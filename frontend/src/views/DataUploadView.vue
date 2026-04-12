@@ -223,7 +223,9 @@ setTimeout(() => {
                 @click="uploadSlot(cat.fileType)"
               >
                 <span v-if="slots[cat.fileType].status !== 'uploading'">Upload</span>
-                <span v-else class="uploading-label"><i class="pi pi-spin pi-spinner"></i> Uploading…</span>
+                <span v-else class="uploading-label"
+                  ><i class="pi pi-spin pi-spinner"></i> Uploading…</span
+                >
               </button>
             </div>
           </div>
@@ -263,7 +265,9 @@ setTimeout(() => {
   max-width: 980px;
   opacity: 0;
   transform: translateY(6px);
-  transition: opacity 0.35s ease, transform 0.35s ease;
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease;
 }
 
 .upload-page--visible {
@@ -339,7 +343,9 @@ setTimeout(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
 }
 
 .upload-card--busy {
@@ -406,7 +412,9 @@ setTimeout(() => {
   border-radius: 8px;
   background: var(--c-bg);
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s;
+  transition:
+    border-color 0.15s,
+    background 0.15s;
 }
 
 .drop-zone:hover {
@@ -467,7 +475,10 @@ setTimeout(() => {
   border-radius: 6px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    border-color 0.12s,
+    color 0.12s;
 }
 
 .btn:disabled {

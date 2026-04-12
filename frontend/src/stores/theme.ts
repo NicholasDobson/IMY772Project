@@ -4,9 +4,7 @@ import { ref, computed } from 'vue'
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export const useThemeStore = defineStore('theme', () => {
-  const mode = ref<ThemeMode>(
-    (localStorage.getItem('amr-theme') as ThemeMode) || 'system'
-  )
+  const mode = ref<ThemeMode>((localStorage.getItem('amr-theme') as ThemeMode) || 'system')
 
   const resolvedTheme = computed<'light' | 'dark'>(() => {
     if (mode.value === 'system') {
@@ -22,7 +20,11 @@ export const useThemeStore = defineStore('theme', () => {
 
     html.setAttribute('data-theme', isDark ? 'dark' : 'light')
     // PrimeVue dark mode toggle
-    isDark ? html.classList.add('dark-mode') : html.classList.remove('dark-mode')
+    if (isDark) {
+      html.classList.add('dark-mode')
+    } else {
+      html.classList.remove('dark-mode')
+    }
   }
 
   function setMode(m: ThemeMode) {

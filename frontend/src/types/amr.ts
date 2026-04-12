@@ -5,10 +5,10 @@
      Epicollect_Metadata.xlsx, StarAMR_Metrics.xlsx
 ─────────────────────────────────────────────────────────────────── */
 
-export type RiskLevel  = 'HIGH' | 'MED' | 'LOW'
-export type YoyTrend   = 'up' | 'down' | 'stable'
+export type RiskLevel = 'HIGH' | 'MED' | 'LOW'
+export type YoyTrend = 'up' | 'down' | 'stable'
 export type ResistanceLevel = 'R' | 'I' | 'S'
-export type QualityStatus   = 'PASS' | 'FAIL' | 'WARN'
+export type QualityStatus = 'PASS' | 'FAIL' | 'WARN'
 
 /* AMRFinderPlus row */
 export interface Gene {

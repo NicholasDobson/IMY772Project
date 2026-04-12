@@ -132,7 +132,7 @@ public class SitesService {
                     || (pheno != null && pheno.contains("R"))
                     || (sir != null && sir.contains("R"));
         }).count();
-        stats.put("resistantIsolates", resistant);
+        stats.put("resistantIsolates", (int) resistant);
 
         return stats;
     }
