@@ -4,9 +4,7 @@ import { ref, computed } from 'vue'
 export type ThemeMode = 'light' | 'dark' | 'system'
 
 export const useThemeStore = defineStore('theme', () => {
-  const mode = ref<ThemeMode>(
-    (localStorage.getItem('amr-theme') as ThemeMode) || 'system'
-  )
+  const mode = ref<ThemeMode>((localStorage.getItem('amr-theme') as ThemeMode) || 'system')
 
   const resolvedTheme = computed<'light' | 'dark'>(() => {
     if (mode.value === 'system') {

@@ -5,11 +5,11 @@ import upLogo from '@/assets/up-logo.png'
 const route = useRoute()
 
 const navItems = [
-  { name: 'Dashboard',      path: '/',          icon: 'pi-objects-column' },
-  { name: 'Map',            path: '/map',        icon: 'pi-map' },
-  { name: 'River detail',   path: '/river',      icon: 'pi-chart-line' },
-  { name: 'Education Blog', path: '/education',  icon: 'pi-book' },
-  { name: 'Data Upload',    path: '/upload',     icon: 'pi-upload' },
+  { name: 'Dashboard', path: '/', icon: 'pi-objects-column' },
+  { name: 'Map', path: '/map', icon: 'pi-map' },
+  { name: 'River detail', path: '/river', icon: 'pi-chart-line' },
+  { name: 'Education Blog', path: '/education', icon: 'pi-book' },
+  { name: 'Data Upload', path: '/upload', icon: 'pi-upload' },
 ]
 
 function isActive(path: string) {
@@ -26,10 +26,21 @@ function isActive(path: string) {
       </div>
       <div class="amr-logo">
         <svg width="32" height="22" viewBox="0 0 32 22" fill="none">
-          <path d="M2 16 C5 8, 9 5, 13 11 S21 19, 25 13 S30 4, 30 4"
-            stroke="var(--c-brand)" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-          <path d="M2 20 C5 12, 9 9, 13 15 S21 23, 25 17 S30 8, 30 8"
-            stroke="var(--c-brand)" stroke-width="1.2" stroke-linecap="round" fill="none" opacity="0.4"/>
+          <path
+            d="M2 16 C5 8, 9 5, 13 11 S21 19, 25 13 S30 4, 30 4"
+            stroke="var(--c-brand)"
+            stroke-width="2.2"
+            stroke-linecap="round"
+            fill="none"
+          />
+          <path
+            d="M2 20 C5 12, 9 9, 13 15 S21 23, 25 17 S30 8, 30 8"
+            stroke="var(--c-brand)"
+            stroke-width="1.2"
+            stroke-linecap="round"
+            fill="none"
+            opacity="0.4"
+          />
         </svg>
         <span class="amr-wordmark">
           <span class="amr-part">AMR</span><span class="watch-part">Watch</span>
@@ -78,7 +89,9 @@ function isActive(path: string) {
   display: flex;
   flex-direction: column;
   flex-shrink: 0;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 /* Brand */
@@ -116,8 +129,12 @@ function isActive(path: string) {
   letter-spacing: -0.2px;
 }
 
-.amr-part   { color: var(--c-brand); }
-.watch-part { color: var(--c-heading); }
+.amr-part {
+  color: var(--c-brand);
+}
+.watch-part {
+  color: var(--c-heading);
+}
 
 /* Nav */
 .sidebar-nav {
@@ -138,7 +155,9 @@ function isActive(path: string) {
   font-size: 13px;
   font-weight: 400;
   text-decoration: none;
-  transition: background 0.12s, color 0.12s;
+  transition:
+    background 0.12s,
+    color 0.12s;
   white-space: nowrap;
 }
 

@@ -34,7 +34,6 @@ const themeOptions: {
     </div>
 
     <div class="settings-body">
-
       <!-- Appearance section -->
       <section class="settings-section">
         <div class="section-header">
@@ -87,7 +86,10 @@ const themeOptions: {
 
             <!-- Radio indicator + label -->
             <div class="theme-card-footer">
-              <span class="radio-dot" :class="{ 'radio-dot--checked': themeStore.mode === opt.value }">
+              <span
+                class="radio-dot"
+                :class="{ 'radio-dot--checked': themeStore.mode === opt.value }"
+              >
                 <span class="radio-inner"></span>
               </span>
               <div class="theme-card-text">
@@ -118,14 +120,15 @@ const themeOptions: {
       <section class="settings-section">
         <div class="section-header">
           <h2 class="section-title">Notifications</h2>
-          <p class="section-desc">Configure alerts for high-risk detections and upload completions.</p>
+          <p class="section-desc">
+            Configure alerts for high-risk detections and upload completions.
+          </p>
         </div>
         <div class="placeholder-block">
           <i class="pi pi-bell placeholder-icon"></i>
           <span>Notification settings coming soon</span>
         </div>
       </section>
-
     </div>
   </div>
 </template>
@@ -206,7 +209,7 @@ const themeOptions: {
   padding: 0;
   margin: -1px;
   overflow: hidden;
-  clip: rect(0,0,0,0);
+  clip: rect(0, 0, 0, 0);
   white-space: nowrap;
   border: 0;
 }
@@ -218,7 +221,9 @@ const themeOptions: {
   overflow: hidden;
   display: flex;
   height: 108px;
-  transition: border-color 0.18s, box-shadow 0.18s;
+  transition:
+    border-color 0.18s,
+    box-shadow 0.18s;
   box-shadow: var(--c-shadow);
 }
 
@@ -233,60 +238,90 @@ const themeOptions: {
 
 /* Light preview */
 .preview--light {
-  background: #F4F6F8;
+  background: #f4f6f8;
 }
 .preview--light .preview-sidebar {
-  background: #FFFFFF;
-  border-right: 1px solid #E5E7EB;
+  background: #ffffff;
+  border-right: 1px solid #e5e7eb;
 }
-.preview--light .preview-logo { background: #E5E7EB; }
-.preview--light .preview-nav-item { background: #F3F4F6; }
-.preview--light .preview-nav-item--active { background: #DBEAFE; }
-.preview--light .preview-stat { background: #FFFFFF; border: 1px solid #E5E7EB; }
-.preview--light .preview-block { background: #E5E7EB; }
-.preview--light .preview-block--wide { background: #DBEAFE; }
+.preview--light .preview-logo {
+  background: #e5e7eb;
+}
+.preview--light .preview-nav-item {
+  background: #f3f4f6;
+}
+.preview--light .preview-nav-item--active {
+  background: #dbeafe;
+}
+.preview--light .preview-stat {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+}
+.preview--light .preview-block {
+  background: #e5e7eb;
+}
+.preview--light .preview-block--wide {
+  background: #dbeafe;
+}
 
 /* Dark preview */
 .preview--dark {
-  background: #0A0F1A;
+  background: #0a0f1a;
 }
 .preview--dark .preview-sidebar {
-  background: #0C1420;
-  border-right: 1px solid rgba(255,255,255,0.07);
+  background: #0c1420;
+  border-right: 1px solid rgba(255, 255, 255, 0.07);
 }
-.preview--dark .preview-logo { background: rgba(255,255,255,0.08); }
-.preview--dark .preview-nav-item { background: rgba(255,255,255,0.05); }
-.preview--dark .preview-nav-item--active { background: rgba(59,130,246,0.15); }
-.preview--dark .preview-stat { background: #101D2E; border: 1px solid rgba(255,255,255,0.08); }
-.preview--dark .preview-block { background: rgba(255,255,255,0.08); }
-.preview--dark .preview-block--wide { background: rgba(59,130,246,0.12); }
+.preview--dark .preview-logo {
+  background: rgba(255, 255, 255, 0.08);
+}
+.preview--dark .preview-nav-item {
+  background: rgba(255, 255, 255, 0.05);
+}
+.preview--dark .preview-nav-item--active {
+  background: rgba(59, 130, 246, 0.15);
+}
+.preview--dark .preview-stat {
+  background: #101d2e;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+.preview--dark .preview-block {
+  background: rgba(255, 255, 255, 0.08);
+}
+.preview--dark .preview-block--wide {
+  background: rgba(59, 130, 246, 0.12);
+}
 
 /* System preview — split: left half light, right half dark */
 .preview--system {
   position: relative;
 }
 .preview--system .preview-sidebar {
-  background: linear-gradient(to bottom, #FFFFFF 50%, #0C1420 50%);
-  border-right: 1px solid #E5E7EB;
+  background: linear-gradient(to bottom, #ffffff 50%, #0c1420 50%);
+  border-right: 1px solid #e5e7eb;
 }
 .preview--system .preview-logo {
-  background: linear-gradient(to bottom, #E5E7EB 50%, rgba(255,255,255,0.08) 50%);
+  background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255, 255, 255, 0.08) 50%);
 }
 .preview--system .preview-nav-item {
-  background: linear-gradient(to bottom, #F3F4F6 50%, rgba(255,255,255,0.05) 50%);
+  background: linear-gradient(to bottom, #f3f4f6 50%, rgba(255, 255, 255, 0.05) 50%);
 }
 .preview--system .preview-nav-item--active {
-  background: linear-gradient(to bottom, #DBEAFE 50%, rgba(59,130,246,0.15) 50%);
+  background: linear-gradient(to bottom, #dbeafe 50%, rgba(59, 130, 246, 0.15) 50%);
 }
 .preview--system .preview-content {
-  background: linear-gradient(to bottom, #F4F6F8 50%, #0A0F1A 50%);
+  background: linear-gradient(to bottom, #f4f6f8 50%, #0a0f1a 50%);
 }
 .preview--system .preview-stat {
-  background: linear-gradient(to bottom, #FFFFFF 50%, #101D2E 50%);
-  border: 1px solid #E5E7EB;
+  background: linear-gradient(to bottom, #ffffff 50%, #101d2e 50%);
+  border: 1px solid #e5e7eb;
 }
-.preview--system .preview-block { background: linear-gradient(to bottom, #E5E7EB 50%, rgba(255,255,255,0.08) 50%); }
-.preview--system .preview-block--wide { background: linear-gradient(to bottom, #DBEAFE 50%, rgba(59,130,246,0.12) 50%); }
+.preview--system .preview-block {
+  background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255, 255, 255, 0.08) 50%);
+}
+.preview--system .preview-block--wide {
+  background: linear-gradient(to bottom, #dbeafe 50%, rgba(59, 130, 246, 0.12) 50%);
+}
 
 /* ── Preview internals ────────────────────────────────── */
 .preview-sidebar {

@@ -4,7 +4,7 @@
       <div class="filters-header">
         <h2>Map Filters</h2>
       </div>
-      
+
       <div class="filters-content">
         <div class="filter-group">
           <label>River System</label>
@@ -70,11 +70,13 @@
         <div class="summary-detail">
           <strong>Last Sampled:</strong> <span>{{ siteSummary.lastSampledDate }}</span>
         </div>
-        
+
         <h4>Detected Organisms:</h4>
         <ul class="organisms-list">
           <li v-for="org in siteSummary.detectedOrganisms" :key="org">
-            <a href="#" @click.prevent="goToBacteriaDetails(org)" class="organism-link">{{ org }}</a>
+            <a href="#" @click.prevent="goToBacteriaDetails(org)" class="organism-link">{{
+              org
+            }}</a>
           </li>
         </ul>
 
@@ -89,82 +91,82 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, reactive, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 // Import Leaflet components
-import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet';
+import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
 
-const router = useRouter();
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const router = useRouter()
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 
 // Map State
-const zoom = ref(10);
-const center = ref([ -25.747, 28.229 ]); // Pretoria Coordinates [Lat, Lng]
+const zoom = ref(10)
+const center = ref([-25.747, 28.229]) // Pretoria Coordinates [Lat, Lng]
 
 // Data State
-const filterOptions = reactive({ rivers: [], organisms: [], sirProfiles: [] });
-const selectedFilters = reactive({ riverName: '', organism: '', sirProfile: '' });
-const activeMarkers = ref<any[]>([]);
-const siteSummary = ref<any>(null);
+const filterOptions = reactive({ rivers: [], organisms: [], sirProfiles: [] })
+const selectedFilters = reactive({ riverName: '', organism: '', sirProfile: '' })
+const activeMarkers = ref<any[]>([])
+const siteSummary = ref<any>(null)
 
 // Lifecycle
 onMounted(async () => {
-  await fetchFilterOptions();
-  await fetchMarkers();
-});
+  await fetchFilterOptions()
+  await fetchMarkers()
+})
 
 // Fetch Dropdown Options
 async function fetchFilterOptions() {
   try {
-    const res = await fetch(`${API_BASE}/map/filters`);
+    const res = await fetch(`${API_BASE}/map/filters`)
     if (res.ok) {
-      const data = await res.json();
-      filterOptions.rivers = data.rivers;
-      filterOptions.organisms = data.organisms;
-      filterOptions.sirProfiles = data.sirProfiles;
+      const data = await res.json()
+      filterOptions.rivers = data.rivers
+      filterOptions.organisms = data.organisms
+      filterOptions.sirProfiles = data.sirProfiles
     }
   } catch (error) {
-    console.error("Failed to load filters", error);
+    console.error('Failed to load filters', error)
   }
 }
 
 // Fetch Markers based on Filters
 async function fetchMarkers() {
   try {
-    const params = new URLSearchParams();
-    if (selectedFilters.riverName) params.append('riverName', selectedFilters.riverName);
-    if (selectedFilters.organism) params.append('organism', selectedFilters.organism);
-    if (selectedFilters.sirProfile) params.append('sirProfile', selectedFilters.sirProfile);
+    const params = new URLSearchParams()
+    if (selectedFilters.riverName) params.append('riverName', selectedFilters.riverName)
+    if (selectedFilters.organism) params.append('organism', selectedFilters.organism)
+    if (selectedFilters.sirProfile) params.append('sirProfile', selectedFilters.sirProfile)
 
-    const res = await fetch(`${API_BASE}/map/markers?${params.toString()}`);
+    const res = await fetch(`${API_BASE}/map/markers?${params.toString()}`)
     if (res.ok) {
       // Just assign the fetched DTOs to the array, Vue handles the reactivity and drawing!
-      activeMarkers.value = await res.json();
+      activeMarkers.value = await res.json()
     }
   } catch (error) {
-    console.error("Failed to fetch markers", error);
+    console.error('Failed to fetch markers', error)
   }
 }
 
 // Fetch specific site details when a marker is clicked
 async function fetchSiteSummary(siteId: string) {
   try {
-    const res = await fetch(`${API_BASE}/map/sites/${siteId}/summary`);
+    const res = await fetch(`${API_BASE}/map/sites/${siteId}/summary`)
     if (res.ok) {
-      siteSummary.value = await res.json();
+      siteSummary.value = await res.json()
     }
   } catch (error) {
-    console.error("Failed to load site summary", error);
+    console.error('Failed to load site summary', error)
   }
 }
 
 // Navigation functions
 function goToRiverDetails(siteId: string) {
-  router.push({ name: 'river-detail', params: { id: siteId } });
+  router.push({ name: 'river-detail', params: { id: siteId } })
 }
 
 function goToBacteriaDetails(organismName: string) {
-  router.push({ name: 'bacteria', params: { name: organismName } });
+  router.push({ name: 'bacteria', params: { name: organismName } })
 }
 </script>
 

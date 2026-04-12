@@ -22,53 +22,58 @@ import {
 import type { RiskLevel } from '@/types/amr'
 
 /* ── State ───────────────────────────────────────────────────── */
-const router  = useRouter()
+const router = useRouter()
 const visible = ref(false)
-onMounted(() => { setTimeout(() => { visible.value = true }, 60) })
+onMounted(() => {
+  setTimeout(() => {
+    visible.value = true
+  }, 60)
+})
 
 /* ── Chart theme ─────────────────────────────────────────────── */
-const { isDark, tooltipBase, axisLabel, splitLine, axisLine, blue, blueHover, red, redHover } = useChartTheme()
+const { isDark, tooltipBase, axisLabel, splitLine, axisLine, blue, blueHover, red, redHover } =
+  useChartTheme()
 
 /* ── Helpers ─────────────────────────────────────────────────── */
 function riskColor(risk: RiskLevel): string {
   if (risk === 'HIGH') return 'var(--c-risk-high)'
-  if (risk === 'MED')  return 'var(--c-risk-med)'
+  if (risk === 'MED') return 'var(--c-risk-med)'
   return 'var(--c-risk-low)'
 }
 
 function riskBadgeClass(risk: RiskLevel): string {
   if (risk === 'HIGH') return 'badge-high'
-  if (risk === 'MED')  return 'badge-med'
+  if (risk === 'MED') return 'badge-med'
   return 'badge-low'
 }
 
 function classSeverity(cls: string): 'danger' | 'warn' | 'secondary' | 'info' {
-  if (cls === 'BETA-LACTAM')    return 'danger'
+  if (cls === 'BETA-LACTAM') return 'danger'
   if (cls === 'AMINOGLYCOSIDE') return 'warn'
-  if (cls === 'TETRACYCLINE')   return 'secondary'
+  if (cls === 'TETRACYCLINE') return 'secondary'
   return 'info'
 }
 
 function riskSeverity(r: RiskLevel): 'danger' | 'warn' | 'success' {
   if (r === 'HIGH') return 'danger'
-  if (r === 'MED')  return 'warn'
+  if (r === 'MED') return 'warn'
   return 'success'
 }
 
 function arCodeSeverity(code: string): 'danger' | 'warn' | 'secondary' {
-  if (code === 'CRE' || code === 'VRE')              return 'danger'
+  if (code === 'CRE' || code === 'VRE') return 'danger'
   if (code === 'ESBL' || code === 'MDR' || code === 'MDRO') return 'warn'
   return 'secondary'
 }
 
 function trendIcon(t: string): string {
-  if (t === 'up')   return 'pi pi-arrow-up'
+  if (t === 'up') return 'pi pi-arrow-up'
   if (t === 'down') return 'pi pi-arrow-down'
   return 'pi pi-minus'
 }
 
 function trendStyle(t: string): Record<string, string> {
-  if (t === 'up')   return { color: 'var(--c-red)' }
+  if (t === 'up') return { color: 'var(--c-red)' }
   if (t === 'down') return { color: 'var(--c-green)' }
   return { color: 'var(--c-text-dim)' }
 }
@@ -95,7 +100,7 @@ const chartOption = computed(() => ({
     trigger: 'axis' as const,
     ...tooltipBase.value,
     formatter: (params: Array<{ name: string; color: string; value: number | null }>) => {
-      const p = params.find(x => x.value != null)
+      const p = params.find((x) => x.value != null)
       if (!p) return ''
       return `<div style="font-family:DM Sans,sans-serif;font-size:12px">
         <strong>${p.name}</strong><br/>
@@ -144,7 +149,11 @@ const chartOption = computed(() => ({
     itemWidth: 10,
     itemHeight: 10,
     borderRadius: 2,
-    textStyle: { color: isDark.value ? '#5C7A94' : '#9CA3AF', fontFamily: 'DM Sans, sans-serif', fontSize: 11 },
+    textStyle: {
+      color: isDark.value ? '#5C7A94' : '#9CA3AF',
+      fontFamily: 'DM Sans, sans-serif',
+      fontSize: 11,
+    },
   },
 }))
 </script>
@@ -245,7 +254,11 @@ const chartOption = computed(() => ({
           </Column>
           <Column field="yoyTrend" header="YoY" style="width: 60px; text-align: center">
             <template #body="{ data }">
-              <i :class="trendIcon(data.yoyTrend)" :style="trendStyle(data.yoyTrend)" style="font-size: 13px"></i>
+              <i
+                :class="trendIcon(data.yoyTrend)"
+                :style="trendStyle(data.yoyTrend)"
+                style="font-size: 13px"
+              ></i>
             </template>
           </Column>
           <Column header="" style="width: 36px; text-align: right">
@@ -273,7 +286,11 @@ const chartOption = computed(() => ({
           </Column>
           <Column field="resistanceClass" header="Class">
             <template #body="{ data }">
-              <Tag :value="data.resistanceClass" :severity="classSeverity(data.resistanceClass)" class="class-tag" />
+              <Tag
+                :value="data.resistanceClass"
+                :severity="classSeverity(data.resistanceClass)"
+                class="class-tag"
+              />
             </template>
           </Column>
           <Column field="subclass" header="Subclass">
@@ -378,7 +395,9 @@ const chartOption = computed(() => ({
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .panel-header {
@@ -404,12 +423,23 @@ const chartOption = computed(() => ({
 }
 
 /* ── ECharts ───────────────────────────────────────── */
-.echart { height: 220px; width: 100%; }
+.echart {
+  height: 220px;
+  width: 100%;
+}
 
 /* ── Province Risk ─────────────────────────────────── */
-.province-list { display: flex; flex-direction: column; gap: 10px; }
+.province-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-.province-row { display: flex; align-items: center; gap: 10px; }
+.province-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 .province-name {
   font-size: 12px;
@@ -444,14 +474,30 @@ const chartOption = computed(() => ({
   text-align: center;
 }
 
-.badge-high { color: var(--c-risk-high); border-color: var(--c-risk-high); background: var(--c-red-dim); }
-.badge-med  { color: var(--c-risk-med);  border-color: var(--c-risk-med);  background: var(--c-amber-dim); }
-.badge-low  { color: var(--c-risk-low);  border-color: var(--c-risk-low);  background: var(--c-green-dim); }
+.badge-high {
+  color: var(--c-risk-high);
+  border-color: var(--c-risk-high);
+  background: var(--c-red-dim);
+}
+.badge-med {
+  color: var(--c-risk-med);
+  border-color: var(--c-risk-med);
+  background: var(--c-amber-dim);
+}
+.badge-low {
+  color: var(--c-risk-low);
+  border-color: var(--c-risk-low);
+  background: var(--c-green-dim);
+}
 
 /* ── Tables ────────────────────────────────────────── */
-.amr-table { font-family: 'DM Sans', sans-serif; }
+.amr-table {
+  font-family: 'DM Sans', sans-serif;
+}
 
-.organisms-table :deep(tr) { cursor: pointer !important; }
+.organisms-table :deep(tr) {
+  cursor: pointer !important;
+}
 
 .org-name {
   font-style: italic;
@@ -469,7 +515,10 @@ const chartOption = computed(() => ({
   border-radius: 3px;
 }
 
-.class-tag { font-size: 9.5px !important; font-weight: 700 !important; }
+.class-tag {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+}
 
 .subclass-text {
   font-size: 11.5px;
@@ -505,17 +554,30 @@ const chartOption = computed(() => ({
   border-radius: 3px;
 }
 
-.risk-tag { font-size: 9.5px !important; font-weight: 700 !important; }
+.risk-tag {
+  font-size: 9.5px !important;
+  font-weight: 700 !important;
+}
 
 /* ── Responsive ────────────────────────────────────── */
 @media (max-width: 1080px) {
-  .stats-row  { grid-template-columns: repeat(2, 1fr); }
-  .mid-row    { grid-template-columns: 1fr; }
-  .bottom-row { grid-template-columns: 1fr; }
+  .stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .mid-row {
+    grid-template-columns: 1fr;
+  }
+  .bottom-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 600px) {
-  .dashboard  { padding: 0 14px 32px; }
-  .stats-row  { grid-template-columns: 1fr 1fr; }
+  .dashboard {
+    padding: 0 14px 32px;
+  }
+  .stats-row {
+    grid-template-columns: 1fr 1fr;
+  }
 }
 </style>
