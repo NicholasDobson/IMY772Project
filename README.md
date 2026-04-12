@@ -1,4 +1,4 @@
-# 🌱 Smart AgriCloud PWA
+# 🌱 AMRWatch
 **IMY 772 – Web Information Systems Project (2026)**
 
 Client: Department of Plant and Soil Sciences  
