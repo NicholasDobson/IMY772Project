@@ -23,7 +23,7 @@ public class Isolate {
     private WaterSample waterSample;
 
     @Column(name = "owner_id")
-    private UUID ownerId;
+    private java.util.UUID ownerId;
 
     private String isolateNumber;
     private String organismIdentity;
