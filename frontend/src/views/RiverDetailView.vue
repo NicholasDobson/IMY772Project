@@ -107,16 +107,20 @@ async function loadSite(id: string) {
   loading.value = true
   detail.value  = null
   try {
-    const [siteRes, samplesRes, isolatesRes] = await Promise.all([
+    const [siteRes, samplesRes, isolatesRes, amrRes, wgsRes] = await Promise.all([
       fetch(`${BASE}/sites/${id}`),
       fetch(`${BASE}/sites/${id}/water-samples`),
       fetch(`${BASE}/sites/${id}/isolates`),
+      fetch(`${BASE}/sites/${id}/amr-sequences`),
+      fetch(`${BASE}/sites/${id}/wgs-metrics`),
     ])
     if (!siteRes.ok || !samplesRes.ok || !isolatesRes.ok) throw new Error('Fetch failed')
 
     const site         = await siteRes.json()
     const waterSamples = await samplesRes.json()
     const isolatesRaw  = await isolatesRes.json()
+    const amrSequences = amrRes.ok ? await amrRes.json() : []
+    const wgsMetrics   = wgsRes.ok ? await wgsRes.json() : []
 
     const isolates = isolatesRaw.map((iso: any) => ({
       ...iso,
@@ -129,7 +133,7 @@ async function loadSite(id: string) {
       },
     }))
 
-    detail.value = { site, waterSamples, isolates, amrSequences: [], wgsMetrics: [] }
+    detail.value = { site, waterSamples, isolates, amrSequences, wgsMetrics }
   } catch (e) {
     console.error('Failed to load site:', e)
     detail.value = null

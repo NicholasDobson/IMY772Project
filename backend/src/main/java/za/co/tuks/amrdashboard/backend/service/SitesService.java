@@ -9,6 +9,11 @@ import za.co.tuks.amrdashboard.backend.model.WgsMetrics;
 import za.co.tuks.amrdashboard.backend.repository.IsolateRepository;
 import za.co.tuks.amrdashboard.backend.repository.SiteRepository;
 import za.co.tuks.amrdashboard.backend.repository.WaterSampleRepository;
+import za.co.tuks.amrdashboard.backend.model.AmrSequence;
+import za.co.tuks.amrdashboard.backend.model.WgsMetrics;
+import za.co.tuks.amrdashboard.backend.repository.AmrSequenceRepository;
+import za.co.tuks.amrdashboard.backend.repository.WgsMetricsRepository;
+import java.util.Optional;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,6 +29,8 @@ public class SitesService {
     private final SiteRepository siteRepository;
     private final WaterSampleRepository waterSampleRepository;
     private final IsolateRepository isolateRepository;
+    private final AmrSequenceRepository amrSequenceRepository;
+    private final WgsMetricsRepository wgsMetricsRepository;
 
     public List<Map<String, Object>> getAllSites() {
         List<Map<String, Object>> result = new ArrayList<>();
@@ -57,6 +64,30 @@ public class SitesService {
         List<Map<String, Object>> result = new ArrayList<>();
         for (Isolate isolate : isolateRepository.findByWaterSample_Site_SiteId(siteId)) {
             result.add(mapIsolate(isolate));
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> getAmrSequencesBySiteId(String siteId) {
+        List<Isolate> isolates = isolateRepository.findByWaterSample_Site_SiteId(siteId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Isolate isolate : isolates) {
+            if (isolate.getAmrSequences() != null) {
+                for (AmrSequence seq : isolate.getAmrSequences()) {
+                    result.add(mapAmrSequence(seq));
+                }
+            }
+        }
+        return result;
+    }
+
+    public List<Map<String, Object>> getWgsMetricsBySiteId(String siteId) {
+        List<Isolate> isolates = isolateRepository.findByWaterSample_Site_SiteId(siteId);
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (Isolate isolate : isolates) {
+            if (isolate.getWgsMetrics() != null) {
+                result.add(mapWgsMetrics(isolate.getWgsMetrics()));
+            }
         }
         return result;
     }
@@ -171,6 +202,32 @@ public class SitesService {
         mapped.put("arCode", isolate.getArCode());
         mapped.put("virulenceGenes", isolate.getVirulenceGenes());
         mapped.put("binaryTypingProfile", isolate.getBinaryTypingProfile());
+        return mapped;
+    }
+
+    private Map<String, Object> mapAmrSequence(AmrSequence seq) {
+        Map<String, Object> mapped = new HashMap<>();
+        mapped.put("isolateId", seq.getIsolate() != null ? seq.getIsolate().getIsolateId() : null);
+        mapped.put("geneSymbol", seq.getGeneSymbol());
+        mapped.put("sequenceName", seq.getSequenceName());
+        mapped.put("elementType", seq.getElementType());
+        mapped.put("resistanceClass", seq.getResistanceClass());
+        mapped.put("resistanceSubclass", seq.getResistanceSubclass());
+        mapped.put("identityPercentage", seq.getIdentityPercentage());
+        mapped.put("coveragePercentage", seq.getCoveragePercentage());
+        return mapped;
+    }
+
+    private Map<String, Object> mapWgsMetrics(WgsMetrics wgs) {
+        Map<String, Object> mapped = new HashMap<>();
+        mapped.put("isolateId", wgs.getIsolate() != null ? wgs.getIsolate().getIsolateId() : null);
+        mapped.put("qualityStatus", wgs.getQualityStatus());
+        mapped.put("genotype", wgs.getGenotype());
+        mapped.put("predictedPhenotype", wgs.getPredictedPhenotype());
+        mapped.put("predictedSirProfile", wgs.getPredictedSirProfile());
+        mapped.put("plasmid", wgs.getPlasmid());
+        mapped.put("genomeLength", wgs.getGenomeLength());
+        mapped.put("n50Value", wgs.getN50Value());
         return mapped;
     }
 
