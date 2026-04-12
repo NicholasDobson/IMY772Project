@@ -9,6 +9,7 @@ import Tag from 'primevue/tag'
 
 import StatCard from '@/components/amr/StatCard.vue'
 import { useChartTheme } from '@/composables/useChartTheme'
+import { useDashboardStore } from '@/stores/dashboard'
 import {
   STAT_CARDS,
   MONTHS,
@@ -21,13 +22,43 @@ import {
 } from '@/data/dashboard'
 import type { RiskLevel } from '@/types/amr'
 
+/* ── Store — live data, falls back to mock when API is unavailable */
+const store = useDashboardStore()
+
+// When the DB has no isolate data (e.g. only Epicollect was uploaded),
+// all resistance-related panels show the static mockdata-derived values
+// instead of misleading zeros returned by the live API.
+const displayStatCards = computed(() =>
+  store.statCards && store.hasIsolateData ? store.statCards : STAT_CARDS
+)
+const displayProvinces = computed(() =>
+  store.hasIsolateData ? (store.provinces ?? PROVINCES) : PROVINCES
+)
+const displayOrganisms = computed(() =>
+  store.hasIsolateData ? (store.topOrganisms ?? TOP_ORGANISMS) : TOP_ORGANISMS
+)
+const displayResistanceGenes = computed(() =>
+  store.hasIsolateData ? (store.resistanceGenes ?? RESISTANCE_GENES) : RESISTANCE_GENES
+)
+const displayRiverSites = computed(() =>
+  store.hasIsolateData ? (store.affectedRiverSites ?? RIVER_SITES) : RIVER_SITES
+)
+const displayMonths = computed(() =>
+  store.hasIsolateData && store.months.length ? store.months : MONTHS
+)
+const displayNormal = computed(() =>
+  store.hasIsolateData && store.monthlyNormal.length ? store.monthlyNormal : MONTHLY_NORMAL
+)
+const displayAlert = computed(() =>
+  store.hasIsolateData && store.monthlyAlert.length ? store.monthlyAlert : MONTHLY_ALERT
+)
+
 /* ── State ───────────────────────────────────────────────────── */
 const router = useRouter()
 const visible = ref(false)
-onMounted(() => {
-  setTimeout(() => {
-    visible.value = true
-  }, 60)
+onMounted(async () => {
+  await store.fetchAll()
+  setTimeout(() => { visible.value = true }, 60)
 })
 
 /* ── Chart theme ─────────────────────────────────────────────── */
@@ -48,10 +79,10 @@ function riskBadgeClass(risk: RiskLevel): string {
 }
 
 function classSeverity(cls: string): 'danger' | 'warn' | 'secondary' | 'info' {
-  if (cls === 'BETA-LACTAM') return 'danger'
-  if (cls === 'AMINOGLYCOSIDE') return 'warn'
-  if (cls === 'TETRACYCLINE') return 'secondary'
-  return 'info'
+  if (cls === 'BETA-LACTAM' || cls === 'COLISTIN' || cls === 'CARBAPENEM') return 'danger'
+  if (cls === 'AMINOGLYCOSIDE' || cls === 'QUINOLONE') return 'warn'
+  if (cls === 'TETRACYCLINE' || cls === 'PHENICOL' || cls === 'TRIMETHOPRIM' || cls === 'SULFONAMIDE') return 'secondary'
+  return 'info'  // MACROLIDE, GLYCOPEPTIDE, etc.
 }
 
 function riskSeverity(r: RiskLevel): 'danger' | 'warn' | 'success' {
@@ -110,7 +141,7 @@ const chartOption = computed(() => ({
   },
   xAxis: {
     type: 'category' as const,
-    data: MONTHS,
+    data: displayMonths.value,
     axisTick: { show: false },
     axisLine: axisLine.value,
     axisLabel: axisLabel.value,
@@ -118,8 +149,6 @@ const chartOption = computed(() => ({
   yAxis: {
     type: 'value' as const,
     min: 0,
-    max: 800,
-    interval: 200,
     splitLine: splitLine.value,
     axisLabel: axisLabel.value,
     axisLine: { show: false },
@@ -129,7 +158,7 @@ const chartOption = computed(() => ({
     {
       name: 'Normal',
       type: 'bar' as const,
-      data: MONTHLY_NORMAL,
+      data: displayNormal.value,
       barMaxWidth: 28,
       itemStyle: { color: blue.value, borderRadius: [3, 3, 0, 0] },
       emphasis: { itemStyle: { color: blueHover.value } },
@@ -137,7 +166,7 @@ const chartOption = computed(() => ({
     {
       name: 'Elevated',
       type: 'bar' as const,
-      data: MONTHLY_ALERT,
+      data: displayAlert.value,
       barMaxWidth: 28,
       itemStyle: { color: red.value, borderRadius: [3, 3, 0, 0] },
       emphasis: { itemStyle: { color: redHover.value } },
@@ -168,7 +197,7 @@ const chartOption = computed(() => ({
     <!-- Stat Cards -->
     <section class="stats-row">
       <StatCard
-        v-for="(stat, i) in STAT_CARDS"
+        v-for="(stat, i) in displayStatCards"
         :key="stat.id"
         :label="stat.label"
         :value="stat.value"
@@ -186,10 +215,23 @@ const chartOption = computed(() => ({
       <div class="panel panel--chart">
         <div class="panel-header">
           <h2 class="panel-title">AMR Detections by Month</h2>
-          <span class="panel-subtitle">Click bar to view organism detail</span>
+          <div class="chart-header-right">
+            <div class="year-toggle" role="group" aria-label="Select year">
+              <button
+                v-for="y in store.availableYears"
+                :key="y"
+                class="year-btn"
+                :class="{ 'year-btn--active': store.selectedYear === y }"
+                :disabled="store.trendLoading"
+                @click="store.selectYear(y)"
+              >{{ y }}</button>
+            </div>
+            <span class="panel-subtitle">Click bar to view organism detail</span>
+          </div>
         </div>
         <VChart
           class="echart"
+          :class="{ 'echart--loading': store.trendLoading }"
           :option="chartOption"
           :autoresize="true"
           style="cursor: pointer"
@@ -200,7 +242,7 @@ const chartOption = computed(() => ({
       <div class="panel panel--province">
         <h2 class="panel-title">Risk by Province</h2>
         <div class="province-list">
-          <div v-for="p in PROVINCES" :key="p.name" class="province-row">
+          <div v-for="p in displayProvinces" :key="p.name" class="province-row">
             <span class="province-name">{{ p.name }}</span>
             <div class="province-bar-track">
               <div
@@ -222,7 +264,7 @@ const chartOption = computed(() => ({
           <span class="panel-subtitle">Click any row to view full AMR resistance profile →</span>
         </div>
         <DataTable
-          :value="TOP_ORGANISMS"
+          :value="displayOrganisms"
           class="amr-table organisms-table"
           size="small"
           @row-click="(e: { data: { name: string } }) => goToBacteria(e.data.name)"
@@ -278,7 +320,7 @@ const chartOption = computed(() => ({
           <h2 class="panel-title">Top Resistance Genes</h2>
           <span class="panel-subtitle">AMRFinderPlus · by isolate count</span>
         </div>
-        <DataTable :value="RESISTANCE_GENES" class="amr-table" size="small">
+        <DataTable :value="displayResistanceGenes" class="amr-table" size="small">
           <Column field="gene" header="Gene Symbol">
             <template #body="{ data }">
               <code class="gene-name">{{ data.gene }}</code>
@@ -317,7 +359,7 @@ const chartOption = computed(() => ({
           <h2 class="panel-title">Affected River Sites</h2>
           <span class="panel-subtitle">Epicollect · South African rivers</span>
         </div>
-        <DataTable :value="RIVER_SITES" class="amr-table" size="small">
+        <DataTable :value="displayRiverSites" class="amr-table" size="small">
           <Column field="siteId" header="Site" style="width: 56px">
             <template #body="{ data }">
               <span class="site-id">{{ data.siteId }}</span>
@@ -420,6 +462,57 @@ const chartOption = computed(() => ({
   color: var(--c-text-dim);
   font-weight: 400;
   white-space: nowrap;
+}
+
+/* ── Chart header right slot ───────────────────────────────── */
+.chart-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+
+.year-toggle {
+  display: flex;
+  gap: 3px;
+}
+
+.year-btn {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 4px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  line-height: 1.6;
+}
+
+.year-btn:hover:not(:disabled) {
+  background: var(--c-brand-dim);
+  border-color: var(--c-brand);
+  color: var(--c-brand);
+}
+
+.year-btn--active {
+  background: var(--c-brand-dim) !important;
+  border-color: var(--c-brand) !important;
+  color: var(--c-brand) !important;
+  font-weight: 600;
+}
+
+.year-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.echart--loading {
+  opacity: 0.5;
+  pointer-events: none;
+  transition: opacity 0.2s;
 }
 
 /* ── ECharts ───────────────────────────────────────── */

@@ -20,11 +20,7 @@ export const useThemeStore = defineStore('theme', () => {
 
     html.setAttribute('data-theme', isDark ? 'dark' : 'light')
     // PrimeVue dark mode toggle
-    if (isDark) {
-      html.classList.add('dark-mode')
-    } else {
-      html.classList.remove('dark-mode')
-    }
+    html.classList.toggle('dark-mode', isDark)
   }
 
   function setMode(m: ThemeMode) {
