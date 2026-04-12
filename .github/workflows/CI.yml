@@ -112,7 +112,7 @@ jobs:
 
       - name: Build frontend for E2E
         working-directory: ./frontend
-        run: npm run build
+        run: npm run build-only
 
       - name: Run frontend E2E tests
         working-directory: ./frontend
