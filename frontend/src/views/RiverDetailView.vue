@@ -10,6 +10,14 @@ import { useThemeStore } from '@/stores/theme'
 
 use([LineChart, BarChart, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer])
 
+interface EChartsTooltipItem {
+  axisValue: string
+  value: number | null | undefined
+  seriesName: string
+  dataIndex: number
+  seriesIndex: number
+}
+
 const BASE = 'http://localhost:8080/api/v1'
 
 
