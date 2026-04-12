@@ -65,6 +65,26 @@ public class SitesController {
         }
     }
 
+    @GetMapping("/sites/{siteId}/amr-sequences")
+    public ResponseEntity<?> getAmrSequencesBySiteId(@PathVariable String siteId) {
+        try {
+            return ResponseEntity.ok(sitesService.getAmrSequencesBySiteId(siteId));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve AMR sequences: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/sites/{siteId}/wgs-metrics")
+    public ResponseEntity<?> getWgsMetricsBySiteId(@PathVariable String siteId) {
+        try {
+            return ResponseEntity.ok(sitesService.getWgsMetricsBySiteId(siteId));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve WGS metrics: " + e.getMessage());
+        }
+    }
+
     @GetMapping("/analytics/compare")
     public ResponseEntity<?> compareAnalytics(
             @RequestParam("siteA") String siteA,
