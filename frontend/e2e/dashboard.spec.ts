@@ -131,9 +131,10 @@ test.describe('Dashboard page', () => {
     const firstOrg = page.locator('.org-name').first()
     await expect(firstOrg).toBeVisible()
 
-    // The DataTable row has a click handler (goToBacteria)
-    // Click on the row containing the first organism name
-    const row = page.locator('tr', { has: firstOrg })
+    // Click the first row that contains an organism name.
+    // Use .first() on the outer locator to avoid strict-mode violations
+    // when multiple rows all "have" a descendant .org-name.
+    const row = page.locator('tr', { has: page.locator('.org-name') }).first()
     await row.click()
 
     // Should navigate to /bacteria/...
