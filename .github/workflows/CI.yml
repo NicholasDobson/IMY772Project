@@ -59,9 +59,7 @@ jobs:
 
       - name: Run frontend lint
         working-directory: ./frontend
-        run: |
-          npx oxlint .
-          npx eslint .
+        run: npm run lint
 
       - name: Run frontend type check
         working-directory: ./frontend
