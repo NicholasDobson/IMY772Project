@@ -7,7 +7,7 @@ import PrimeVue from 'primevue/config'
 import Aura from '@primeuix/themes/aura'
 import ToastService from 'primevue/toastservice'
 import ConfirmationService from 'primevue/confirmationservice'
-import 'leaflet/dist/leaflet.css';
+import 'leaflet/dist/leaflet.css'
 
 /* ── ECharts — register once globally ──────────────────────────
    Views import VChart directly; they must NOT call use() themselves.

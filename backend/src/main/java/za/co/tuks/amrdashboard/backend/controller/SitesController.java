@@ -13,7 +13,7 @@ import za.co.tuks.amrdashboard.backend.service.SitesService;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping({"/api", "/api/v1"})
+@RequestMapping({"/api/v1"})
 @RequiredArgsConstructor
 public class SitesController {
 

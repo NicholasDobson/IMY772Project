@@ -18,11 +18,7 @@ function levelBg(level: string): string {
 
 <template>
   <div class="resistance-grid">
-    <div
-      v-for="entry in entries"
-      :key="entry.antibiotic"
-      class="resistance-row"
-    >
+    <div v-for="entry in entries" :key="entry.antibiotic" class="resistance-row">
       <span class="abx-name">{{ entry.antibiotic }}</span>
       <div class="abx-bar-track">
         <div
@@ -102,6 +98,8 @@ function levelBg(level: string): string {
 }
 
 @media (max-width: 640px) {
-  .abx-name { width: 110px; }
+  .abx-name {
+    width: 110px;
+  }
 }
 </style>
