@@ -10,6 +10,12 @@ import { useThemeStore } from '@/stores/theme'
 
 use([LineChart, BarChart, TooltipComponent, GridComponent, LegendComponent, CanvasRenderer])
 
+interface EChartsTooltipItem {
+  axisValue: string
+  value: number | null
+  seriesName?: string
+}
+
 // ── Click-outside directive ────────────────────────────────────────
 const vClickOutside = {
   mounted(
@@ -407,8 +413,10 @@ const waterChartOption = computed(() => {
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'axis',
-      formatter: (p: Record<string, unknown> | Record<string, unknown>[]) =>
-        `${p[0].axisValue}<br/>${meta.label}: <b>${p[0].value ?? '—'} ${meta.unit}</b>`,
+      formatter: (params: EChartsTooltipItem | EChartsTooltipItem[]) => {
+        const p = Array.isArray(params) ? params : [params]
+        return `${p[0].axisValue}<br/>${meta.label}: <b>${p[0].value ?? '—'} ${meta.unit}</b>`
+      },
     },
     grid: { left: 52, right: 20, top: 16, bottom: 40 },
     xAxis: {

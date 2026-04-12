@@ -96,6 +96,21 @@ import { useRouter } from 'vue-router'
 // Import Leaflet components
 import { LMap, LTileLayer, LMarker } from '@vue-leaflet/vue-leaflet'
 
+interface MapMarker {
+  siteId: string
+  latitude: number
+  longitude: number
+  locationName?: string
+  riverName?: string
+}
+
+interface SiteSummary {
+  siteId: string
+  locationName: string
+  riverName: string
+  [key: string]: string | number | undefined
+}
+
 const router = useRouter()
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 
@@ -104,10 +119,10 @@ const zoom = ref(10)
 const center = ref([-25.747, 28.229]) // Pretoria Coordinates [Lat, Lng]
 
 // Data State
-const filterOptions = reactive({ rivers: [], organisms: [], sirProfiles: [] })
+const filterOptions = reactive({ rivers: [] as string[], organisms: [] as string[], sirProfiles: [] as string[] })
 const selectedFilters = reactive({ riverName: '', organism: '', sirProfile: '' })
-const activeMarkers = ref<Record<string, unknown>[]>([])
-const siteSummary = ref<Record<string, unknown> | null>(null)
+const activeMarkers = ref<MapMarker[]>([])
+const siteSummary = ref<SiteSummary | null>(null)
 
 // Lifecycle
 onMounted(async () => {
