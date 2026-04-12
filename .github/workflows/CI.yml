@@ -76,7 +76,7 @@ jobs:
 
       - name: Build frontend
         working-directory: ./frontend
-        run: npm run build
+        run: npm run build-only
 
       - name: Upload frontend build artifact
         if: always()
