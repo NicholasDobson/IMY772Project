@@ -3,21 +3,23 @@ import { shallowMount } from '@vue/test-utils'
 import { createRouter, createMemoryHistory } from 'vue-router'
 
 /* ── Mock the dashboard store ─────────────────────────────────── */
-const mockFetchAll = vi.fn().mockResolvedValue(undefined)
-const mockSelectYear = vi.fn().mockResolvedValue(undefined)
-
 const mockStore = vi.hoisted(() => ({
   loading: false,
   trendLoading: false,
   error: null as string | null,
-  availableYears: [2024, 2025],
+  availableYears: [2024, 2025] as number[],
   selectedYear: 2025,
   hasIsolateData: false,
-  statCards: null,
-  provinces: null,
-  topOrganisms: null,
-  resistanceGenes: null,
-  affectedRiverSites: null,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  statCards: null as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  provinces: null as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  topOrganisms: null as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  resistanceGenes: null as any,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  affectedRiverSites: null as any,
   trendYear: 2025,
   months: [] as string[],
   monthlyNormal: [] as (number | null)[],
@@ -106,8 +108,8 @@ describe('DashboardView', () => {
     const wrapper = await mountDashboard()
     const buttons = wrapper.findAll('.year-btn')
     expect(buttons).toHaveLength(2)
-    expect(buttons[0].text()).toBe('2024')
-    expect(buttons[1].text()).toBe('2025')
+    expect(buttons[0]!.text()).toBe('2024')
+    expect(buttons[1]!.text()).toBe('2025')
   })
 
   it('marks the selected year button as active', async () => {
@@ -130,7 +132,7 @@ describe('DashboardView', () => {
   it('calls store.selectYear when a year button is clicked', async () => {
     const wrapper = await mountDashboard()
     const buttons = wrapper.findAll('.year-btn')
-    await buttons[0].trigger('click')
+    await buttons[0]!.trigger('click')
     expect(mockStore.selectYear).toHaveBeenCalledWith(2024)
   })
 
@@ -145,8 +147,8 @@ describe('DashboardView', () => {
 
   it('passes STAT_CARDS label to first StatCard stub when hasIsolateData is false', async () => {
     const wrapper = await mountDashboard()
-    const firstCard = wrapper.findAll('stat-card-stub')[0]
-    expect(firstCard.attributes('label')).toBe(STAT_CARDS[0].label)
+    const firstCard = wrapper.findAll('stat-card-stub')[0]!
+    expect(firstCard.attributes('label')).toBe(STAT_CARDS[0]!.label)
   })
 
   /* ── Live data override (hasIsolateData = true) ───────────────── */
@@ -161,7 +163,7 @@ describe('DashboardView', () => {
     ]
 
     const wrapper = await mountDashboard()
-    const firstCard = wrapper.findAll('stat-card-stub')[0]
+    const firstCard = wrapper.findAll('stat-card-stub')[0]!
     expect(firstCard.attributes('label')).toBe('LIVE Label')
     expect(firstCard.attributes('value')).toBe('99%')
   })

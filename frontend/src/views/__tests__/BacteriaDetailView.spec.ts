@@ -55,7 +55,8 @@ describe('BacteriaDetailView', () => {
     // The route param is always shown as the heading (even when unknown),
     // but the organism data (description, gram stain, etc.) falls back to E. coli.
     const wrapper = await mountForOrganism('Unknown%20Organism')
-    const fallbackOrganism = ORGANISM_DB[DEFAULT_ORGANISM]
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    const fallbackOrganism = ORGANISM_DB[DEFAULT_ORGANISM]!
     // Description comes from the fallback organism, not the unknown name
     expect(wrapper.find('.organism-desc').text()).toBe(fallbackOrganism.description)
     expect(wrapper.find('.gram-pill').text()).toBe(fallbackOrganism.gramStain)
@@ -63,13 +64,13 @@ describe('BacteriaDetailView', () => {
 
   it('renders the organism description', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
     expect(wrapper.find('.organism-desc').text()).toBe(ecoli.description)
   })
 
   it('renders the gram stain pill', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    expect(wrapper.find('.gram-pill').text()).toBe(ORGANISM_DB['Escherichia coli'].gramStain)
+    expect(wrapper.find('.gram-pill').text()).toBe(ORGANISM_DB['Escherichia coli']!.gramStain)
   })
 
   it('renders the meta pills including common name', async () => {
@@ -87,21 +88,21 @@ describe('BacteriaDetailView', () => {
 
   it('displays total detections in the first KPI card', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
     const kpiValues = wrapper.findAll('.kpi-value').map((v) => v.text())
     expect(kpiValues[0]).toContain(ecoli.detectionCount.toLocaleString())
   })
 
   it('displays site count in the second KPI card', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
     const kpiValues = wrapper.findAll('.kpi-value').map((v) => v.text())
     expect(kpiValues[1]).toContain(String(ecoli.siteCount))
   })
 
   it('displays resistance rate in the third KPI card', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
     const kpiValues = wrapper.findAll('.kpi-value').map((v) => v.text())
     expect(kpiValues[2]).toContain(String(ecoli.resistanceRate))
   })
@@ -110,7 +111,7 @@ describe('BacteriaDetailView', () => {
 
   it('computes R/I/S counts from the resistance profile', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
 
     const expectedR = ecoli.resistanceProfile.filter((a) => a.level === 'R').length
     const expectedI = ecoli.resistanceProfile.filter((a) => a.level === 'I').length
@@ -149,7 +150,7 @@ describe('BacteriaDetailView', () => {
 
   it('shows the gene count subtitle', async () => {
     const wrapper = await mountForOrganism('Escherichia%20coli')
-    const ecoli = ORGANISM_DB['Escherichia coli']
+    const ecoli = ORGANISM_DB['Escherichia coli']!
     const subtitle = wrapper.find('.panel-subtitle')
     expect(subtitle.text()).toContain(`${ecoli.genes.length} genes detected`)
   })
@@ -159,8 +160,8 @@ describe('BacteriaDetailView', () => {
   it('loads Klebsiella pneumoniae data from the DB', async () => {
     const wrapper = await mountForOrganism('Klebsiella%20pneumoniae')
     expect(wrapper.find('.organism-name').text()).toContain('Klebsiella pneumoniae')
-    const ecoli = ORGANISM_DB['Klebsiella pneumoniae']
-    expect(wrapper.find('.organism-desc').text()).toBe(ecoli.description)
+    const kp = ORGANISM_DB['Klebsiella pneumoniae']!
+    expect(wrapper.find('.organism-desc').text()).toBe(kp.description)
   })
 
   /* ── trendClass helper (via kpi-sub trend class) ─────────────── */

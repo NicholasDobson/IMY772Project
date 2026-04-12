@@ -21,15 +21,17 @@ vi.mock('@/api/dashboard', () => ({
 
 import { dashboardApi } from '@/api/dashboard'
 
-// Typed helpers for mocking
-const api = dashboardApi as Record<string, ReturnType<typeof vi.fn>>
+// vi.mocked gives us properly-typed mock instances
+const api = vi.mocked(dashboardApi)
 
 describe('useDashboardStore', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     vi.clearAllMocks()
     // Default: all API calls reject (simulates backend unavailable)
-    Object.values(api).forEach((fn) => fn.mockRejectedValue(new Error('Network error')))
+    ;(Object.values(api) as ReturnType<typeof vi.fn>[]).forEach((fn) =>
+      fn.mockRejectedValue(new Error('Network error')),
+    )
   })
 
   /* ── Initial state ───────────────────────────────────────────── */
@@ -194,8 +196,8 @@ describe('useDashboardStore', () => {
     await store.fetchAll()
 
     expect(store.resistanceGenes).toHaveLength(1)
-    expect(store.resistanceGenes![0].gene).toBe('blaCTX-M-14')
-    expect(store.resistanceGenes![0].isolates).toBe(412)
+    expect(store.resistanceGenes![0]!.gene).toBe('blaCTX-M-14')
+    expect(store.resistanceGenes![0]!.isolates).toBe(412)
   })
 
   it('maps affectedRiverSites into affectedRiverSites computed', async () => {
@@ -207,8 +209,8 @@ describe('useDashboardStore', () => {
     await store.fetchAll()
 
     expect(store.affectedRiverSites).toHaveLength(1)
-    expect(store.affectedRiverSites![0].siteId).toBe('B26')
-    expect(store.affectedRiverSites![0].risk).toBe('HIGH')
+    expect(store.affectedRiverSites![0]!.siteId).toBe('B26')
+    expect(store.affectedRiverSites![0]!.risk).toBe('HIGH')
   })
 
   /* ── monthly trend chart data ────────────────────────────────── */
