@@ -119,7 +119,7 @@ jobs:
 
       - name: Run frontend E2E tests
         working-directory: ./frontend
-        run: npm run test:e2e -- --project=chromium
+        run: npm run test:e2e -- --project=chromium --workers=4
 
       - name: Upload Playwright report
         if: always()
