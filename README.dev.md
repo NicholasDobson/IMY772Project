@@ -65,6 +65,16 @@ To wipe the old compiled files (do this after adding new dependencies/libraries)
 ./mvnw clean
 ```
 
+#### Running tests
+Run tests with:
+```bash
+./mvnw test
+```
+If a test/build fails, run the next test with:
+```bash
+./mvnw clean test
+```
+
 ---
 
 ### Frontend
