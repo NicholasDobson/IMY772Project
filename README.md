@@ -7,7 +7,7 @@ Deployment Platform: Amazon Web Services (AWS)
 
 ---
 
-## 📌 Project Description
+## Project Description
 
 Smart AgriCloud is a cloud-based **Progressive Web Application (PWA)** designed to support agricultural research through **real-time environmental data processing**, **image-based plant health analysis**, and **secure, scalable cloud infrastructure**.
 
@@ -15,7 +15,7 @@ The system enables researchers and students to monitor soil and crop conditions,
 
 ---
 
-## 🎯 Problem Statement
+## Problem Statement
 
 Current agricultural research processes rely on fragmented tools for data collection, manual analysis of plant images, and limited real-time insight. These limitations reduce research efficiency and data accessibility.
 
@@ -27,7 +27,7 @@ This project aims to deliver a **centralised, cloud-native solution** that integ
 
 ---
 
-# 🧠 Phase 1: Marketing Research & Prototyping
+# Phase 1: Marketing Research & Prototyping
 
 ## Market Research
 Target users include:
@@ -70,7 +70,7 @@ Key user needs:
 
 ---
 
-# 📐 Phase 2: Requirements & Design
+# Phase 2: Requirements & Design
 
 ## Functional Requirements
 - Secure user authentication
@@ -103,7 +103,7 @@ Key user needs:
 
 ---
 
-# 🛠 Phase 3: Core Development
+# Phase 3: Core Development
 
 ## Key Implementations
 - Progressive Web App frontend
@@ -120,7 +120,7 @@ Key user needs:
 
 ---
 
-# 🧪 Phase 4: User Testing
+# Phase 4: User Testing
 
 ## Testing Activities
 - Task-based usability testing
@@ -135,7 +135,7 @@ Key user needs:
 
 ---
 
-# 🔧 Phase 5: Refinement
+# Phase 5: Refinement
 
 - Bug fixes
 - UI/UX improvements
@@ -144,7 +144,7 @@ Key user needs:
 
 ---
 
-# 🚀 Phase 6: Final Testing & Deployment
+# Phase 6: Final Testing & Deployment
 
 ## Testing
 - System integration testing
@@ -163,7 +163,7 @@ Key user needs:
 
 ---
 
-# 🧰 Technology Stack
+# Technology Stack
 
 | Layer | Technology |
 |------|-----------|
@@ -177,7 +177,7 @@ Key user needs:
 
 ---
 
-# 📂 Repository Structure
+# Repository Structure
 /frontend
 /backend
 /infrastructure
@@ -188,7 +188,7 @@ Key user needs:
 
 ---
 
-# 📅 Project Timeline
+# Project Timeline
 
 | Phase | Weeks |
 |-----|------|
@@ -201,7 +201,7 @@ Key user needs:
 
 ---
 
-# 👥 Team & Collaboration
+# Team & Collaboration
 
 - Scrum-based workflow
 - Bi-weekly client updates
@@ -210,6 +210,6 @@ Key user needs:
 
 ---
 
-# 📄 License
+# License
 
 This project is developed for academic purposes as part of IMY 772 at the University of Pretoria.
