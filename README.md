@@ -1,4 +1,4 @@
-# 🌱 Smart AgriCloud PWA
+# 🌱 AMRWatch
 **IMY 772 – Web Information Systems Project (2026)**
 
 Client: Department of Plant and Soil Sciences  
@@ -7,7 +7,7 @@ Deployment Platform: Amazon Web Services (AWS)
 
 ---
 
-## 📌 Project Description
+## Project Description
 
 Smart AgriCloud is a cloud-based **Progressive Web Application (PWA)** designed to support agricultural research through **real-time environmental data processing**, **image-based plant health analysis**, and **secure, scalable cloud infrastructure**.
 
@@ -15,7 +15,7 @@ The system enables researchers and students to monitor soil and crop conditions,
 
 ---
 
-## 🎯 Problem Statement
+## Problem Statement
 
 Current agricultural research processes rely on fragmented tools for data collection, manual analysis of plant images, and limited real-time insight. These limitations reduce research efficiency and data accessibility.
 
@@ -163,7 +163,7 @@ Key user needs:
 
 ---
 
-# 🧰 Technology Stack
+# Technology Stack
 
 | Layer | Technology |
 |------|-----------|
@@ -177,7 +177,7 @@ Key user needs:
 
 ---
 
-# 📂 Repository Structure
+# Repository Structure
 /frontend
 /backend
 /infrastructure
@@ -188,7 +188,7 @@ Key user needs:
 
 ---
 
-# 📅 Project Timeline
+# Project Timeline
 
 | Phase | Weeks |
 |-----|------|
@@ -201,7 +201,7 @@ Key user needs:
 
 ---
 
-# 👥 Team & Collaboration
+# Team & Collaboration
 
 - Scrum-based workflow
 - Bi-weekly client updates
@@ -214,15 +214,14 @@ Key user needs:
 |--------------------|----------------------------------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
 | Nicholas Dobson    | Full-Stack Developer, DevOps                  | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/NicholasDobson)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/nicholas-dobson-a64a84355)   |
 | Mpho Tsotetsi      | Backend Developer                             | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/u22668323)        | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/mpho-tsotetsi-256375287/)    |
-| Taylor Sergel    | Full-Stack Developer, Team Lead               | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/ShaylinGovender) | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/shaylin-govender-827347343)  |
+| Taylor Sergel    | Full-Stack Developer, Team Lead               | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/ShaylinGovender) | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/taylor-sergel-aa267a354/)  |
 | Lonwabo Kwitshana  | Frontend Developer, UI/UX                     | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/7onwabo)          | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/lonwabo-kwitshana-b483831a6) |
-| Kyle Liebenberg   | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/AryanMohanlall)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/aryan-mohanlall-a45a89355)   |
-| Diya Budhia    | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/AryanMohanlall)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/aryan-mohanlall-a45a89355)   |
+| Kyle Liebenberg   | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/u22608789)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/kyle-liebenberg-19a315325/)   |
+| Diya Budhia    | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/diyaxbudhia)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/diya-budhia-a9124a355/)   |
 <p align="right">
    <a href="#table-of-contents">Back to top</a>
 </p>
 
 ---
-# 📄 License
 
 This project is developed for academic purposes as part of IMY 772 at the University of Pretoria.

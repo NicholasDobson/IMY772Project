@@ -1,0 +1,163 @@
+/* ═══════════════════════════════════════════════════════
+   AMRWatch — Design Token System
+   Light (default) + Dark via [data-theme="dark"]
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Light Theme ────────────────────────────────────── */
+:root,
+[data-theme='light'] {
+  color-scheme: light;
+
+  --c-bg: #f4f6f8;
+  --c-surface: #ffffff;
+  --c-card: #ffffff;
+  --c-card-hover: #fafbfc;
+  --c-sidebar: #ffffff;
+  --c-sidebar-border: #e5e7eb;
+
+  --c-border: #e5e7eb;
+  --c-border-strong: #d1d5db;
+  --c-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 8px rgba(0, 0, 0, 0.04);
+  --c-shadow-md: 0 2px 8px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+
+  --c-text: #111827;
+  --c-text-muted: #6b7280;
+  --c-text-dim: #9ca3af;
+  --c-heading: #111827;
+
+  --c-brand: #2563eb;
+  --c-brand-dim: rgba(37, 99, 235, 0.08);
+  --c-brand-light: #eff6ff;
+
+  --c-nav-active: #eff6ff;
+  --c-nav-active-text: #1d4ed8;
+
+  --c-red: #dc2626;
+  --c-red-dim: #fef2f2;
+  --c-red-text: #991b1b;
+  --c-amber: #d97706;
+  --c-amber-dim: #fffbeb;
+  --c-amber-text: #92400e;
+  --c-green: #059669;
+  --c-green-dim: #ecfdf5;
+  --c-green-text: #065f46;
+
+  /* Chart specific */
+  --c-chart-blue: #1565c0;
+  --c-chart-blue-2: #1976d2;
+  --c-chart-red: #c62828;
+  --c-chart-red-2: #e53935;
+  --c-chart-grid: #f3f4f6;
+  --c-chart-axis: #9ca3af;
+  --c-chart-tooltip-bg: #ffffff;
+
+  /* Province risk */
+  --c-risk-high: #dc2626;
+  --c-risk-med: #ea580c;
+  --c-risk-low: #16a34a;
+}
+
+/* ── Dark Theme ─────────────────────────────────────── */
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --c-bg: #0a0f1a;
+  --c-surface: #0d1520;
+  --c-card: #101d2e;
+  --c-card-hover: #132234;
+  --c-sidebar: #0c1420;
+  --c-sidebar-border: rgba(255, 255, 255, 0.07);
+
+  --c-border: rgba(255, 255, 255, 0.07);
+  --c-border-strong: rgba(255, 255, 255, 0.13);
+  --c-shadow: 0 1px 3px rgba(0, 0, 0, 0.3), 0 1px 8px rgba(0, 0, 0, 0.2);
+  --c-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.35);
+
+  --c-text: #c9d5e2;
+  --c-text-muted: #5c7a94;
+  --c-text-dim: #374d61;
+  --c-heading: #edf2f7;
+
+  --c-brand: #3b82f6;
+  --c-brand-dim: rgba(59, 130, 246, 0.12);
+  --c-brand-light: rgba(59, 130, 246, 0.15);
+
+  --c-nav-active: rgba(59, 130, 246, 0.1);
+  --c-nav-active-text: #3b82f6;
+
+  --c-red: #f87171;
+  --c-red-dim: rgba(248, 113, 113, 0.12);
+  --c-red-text: #fca5a5;
+  --c-amber: #fbbf24;
+  --c-amber-dim: rgba(251, 191, 36, 0.12);
+  --c-amber-text: #fcd34d;
+  --c-green: #34d399;
+  --c-green-dim: rgba(52, 211, 153, 0.12);
+  --c-green-text: #6ee7b7;
+
+  /* Chart specific */
+  --c-chart-blue: #3b82f6;
+  --c-chart-blue-2: #60a5fa;
+  --c-chart-red: #ef4444;
+  --c-chart-red-2: #f87171;
+  --c-chart-grid: rgba(255, 255, 255, 0.05);
+  --c-chart-axis: #4b6174;
+  --c-chart-tooltip-bg: #1a2d42;
+
+  /* Province risk — semantic colours stay intentional */
+  --c-risk-high: #f87171;
+  --c-risk-med: #fbbf24;
+  --c-risk-low: #34d399;
+}
+
+/* ── Reset ──────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  font-weight: normal;
+}
+
+html {
+  height: 100%;
+}
+
+body {
+  min-height: 100%;
+  color: var(--c-text);
+  background: var(--c-bg);
+  transition:
+    color 0.2s ease,
+    background-color 0.2s ease;
+  line-height: 1.6;
+  font-family:
+    'DM Sans',
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+button {
+  cursor: pointer;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--c-border-strong);
+  border-radius: 4px;
+}
