@@ -13,8 +13,10 @@ import za.co.tuks.amrdashboard.backend.repository.*;
 import java.io.InputStream;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -83,10 +85,20 @@ public class EtlService {
         sample.setTripIdentifier(getCellValueAsString(row.getCell(8)));
         
         Cell dateCell = row.getCell(9);
-        if (dateCell != null && dateCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dateCell)) {
-            sample.setCollectionDate(dateCell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+        if (dateCell != null) {
+            if (dateCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dateCell)) {
+                // Handle properly formatted Excel dates
+                sample.setCollectionDate(dateCell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+            } else if (dateCell.getCellType() == CellType.STRING) {
+                // Handle dates entered as plain text (e.g., "2025-05-10")
+                try {
+                    sample.setCollectionDate(java.time.LocalDate.parse(dateCell.getStringCellValue().trim()));
+                } catch (java.time.format.DateTimeParseException e) {
+                    // If it fails to parse, either leave it null or log it - we leave as null for now.
+                    // log.warn("Invalid date format in text cell: {}", dateCell.getStringCellValue());
+                }
+            }
         }
-
         sample.setWaterTemperature(getCellValueAsDouble(row.getCell(10)));
         sample.setPhLevel(getCellValueAsDouble(row.getCell(11)));
         sample.setTds(getCellValueAsDouble(row.getCell(12)));

@@ -7,7 +7,7 @@ CREATE TABLE sites (
 );
 
 CREATE TABLE water_samples (
-    sample_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    sample_id VARCHAR(255) PRIMARY KEY,
     site_id VARCHAR(50) REFERENCES sites(site_id),
     collected_by_user_id UUID, -- Links to the AWS Cognito User 'sub'
     trip_identifier VARCHAR(100),
@@ -23,7 +23,7 @@ CREATE TABLE water_samples (
 
 CREATE TABLE isolates (
     isolate_id VARCHAR(100) PRIMARY KEY, -- e.g., UP_BN_LR_0089
-    sample_id UUID REFERENCES water_samples(sample_id),
+    sample_id VARCHAR(255) REFERENCES water_samples(sample_id),
     owner_id UUID, -- Links to AWS Cognito User 'sub'
     isolate_number VARCHAR(100),
     organism_identity VARCHAR(255),

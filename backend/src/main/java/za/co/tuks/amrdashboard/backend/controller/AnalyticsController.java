@@ -33,14 +33,45 @@ public class AnalyticsController {
     @GetMapping("/monthly-trend")
     public ResponseEntity<?> getMonthlyTrend(
             @RequestParam(defaultValue = "0") int year) {
-        // Default to current year if not provided
         int targetYear = year == 0 ? java.time.Year.now().getValue() : year;
         return ResponseEntity.ok(analyticsService.getMonthlyTrend(targetYear));
+    }
+
+    @GetMapping("/monthly-trend/available-years")
+    public ResponseEntity<?> getAvailableYears() {
+        return ResponseEntity.ok(analyticsService.getAvailableYears());
+    }
+
+    @GetMapping("/monthly-trend/best-year")
+    public ResponseEntity<?> getMonthlyTrendBestYear() {
+        return ResponseEntity.ok(analyticsService.getMonthlyTrendBestYear());
     }
 
     @GetMapping("/top-organisms")
     public ResponseEntity<?> getTopOrganisms(
             @RequestParam(defaultValue = "5") int limit) {
         return ResponseEntity.ok(analyticsService.getTopOrganisms(limit));
+    }
+
+    @GetMapping("/high-risk-sites")
+    public ResponseEntity<?> getHighRiskSites() {
+        return ResponseEntity.ok(analyticsService.getHighRiskSites());
+    }
+
+    @GetMapping("/risk-by-province")
+    public ResponseEntity<?> getRiskByProvince() {
+        return ResponseEntity.ok(analyticsService.getRiskByProvince());
+    }
+
+    @GetMapping("/top-resistance-genes")
+    public ResponseEntity<?> getTopResistanceGenes(
+            @RequestParam(defaultValue = "8") int limit) {
+        return ResponseEntity.ok(analyticsService.getTopResistanceGenes(limit));
+    }
+
+    @GetMapping("/affected-river-sites")
+    public ResponseEntity<?> getAffectedRiverSites(
+            @RequestParam(defaultValue = "6") int limit) {
+        return ResponseEntity.ok(analyticsService.getAffectedRiverSites(limit));
     }
 }

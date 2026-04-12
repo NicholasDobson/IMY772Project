@@ -9,5 +9,7 @@ import java.util.List;
 @Repository
 public interface WaterSampleRepository extends JpaRepository<WaterSample, String> {
     // Custom query method generated automatically by Spring
-    List<WaterSample> findBySite_SiteId(String siteId); 
+    List<WaterSample> findBySite_SiteId(String siteId);
+
+    List<WaterSample> findBySite_SiteIdOrderByCollectionDateAsc(String siteId);
 }
