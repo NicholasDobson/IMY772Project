@@ -226,6 +226,15 @@ const classChartOption = computed(() => ({
   <div class="bacteria-detail">
     <!-- ── Header ───────────────────────────────────────── -->
     <div class="detail-header">
+      <!-- ── Breadcrumb ───────────────────────────────────── -->
+      <div class="breadcrumb-row">
+        <div class="breadcrumb">
+          <span class="crumb-link" @click="$router.push('/map')">Map</span>
+          <i class="pi pi-chevron-right crumb-sep"></i>
+          <span class="crumb-current">Bacteria Detail</span>
+        </div>
+      </div>
+
       <button class="back-btn" @click="router.push('/')">
         <i class="pi pi-arrow-left"></i>
         <span>Dashboard</span>
@@ -848,5 +857,40 @@ const classChartOption = computed(() => ({
   .kpi-row {
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ── Breadcrumb ────────────────────────────────────── */
+.breadcrumb-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--c-text-muted);
+}
+
+.crumb-link {
+  cursor: pointer;
+  color: var(--c-brand);
+}
+
+.crumb-link:hover {
+  text-decoration: underline;
+}
+
+.crumb-current {
+  color: var(--c-text-muted);
+}
+
+.crumb-sep {
+  font-size: 9px;
 }
 </style>
