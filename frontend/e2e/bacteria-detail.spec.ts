@@ -27,6 +27,8 @@ test.describe('Bacteria Detail page — Escherichia coli', () => {
 
   test('renders the common name meta pill', async ({ page }) => {
     const pills = page.locator('.meta-pill')
+    // Wait for at least one pill to be visible before reading text contents
+    await expect(pills.first()).toBeVisible()
     const texts = await pills.allTextContents()
     expect(texts.some((t) => t.includes('E. coli'))).toBe(true)
   })
@@ -153,10 +155,12 @@ test.describe('Bacteria Detail page — Klebsiella pneumoniae', () => {
 
 /* ── Fallback for unknown organism ─────────────────────────────── */
 test.describe('Bacteria Detail page — unknown organism fallback', () => {
-  test('falls back to Escherichia coli for an unrecognised organism name', async ({ page }) => {
+  test('falls back to E. coli data for an unrecognised organism name', async ({ page }) => {
     await page.goto('/bacteria/Unknown%20Organism%20XYZ')
-    const name = page.locator('.organism-name')
-    await expect(name).toContainText('Escherichia coli')
+    // The heading always shows the route param; but the description and gram
+    // stain are drawn from the E. coli fallback in ORGANISM_DB.
+    await expect(page.locator('.gram-pill')).toHaveText('Gram-negative')
+    await expect(page.locator('.organism-desc')).toContainText('β-lactamase')
   })
 })
 
@@ -170,7 +174,9 @@ test.describe('Cross-page navigation', () => {
     await expect(firstOrg).toBeVisible()
     const orgName = await firstOrg.textContent()
 
-    const row = page.locator('tr', { has: firstOrg })
+    // Use .first() on the outer locator to avoid strict-mode violation
+    // (all rows "have" a .org-name descendant when .first() is used inside has)
+    const row = page.locator('tr', { has: page.locator('.org-name') }).first()
     await row.click()
 
     await expect(page).toHaveURL(/\/bacteria\//)
