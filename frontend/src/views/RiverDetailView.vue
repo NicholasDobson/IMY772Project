@@ -415,6 +415,7 @@ const waterChartOption = computed(() => {
       trigger: 'axis',
       formatter: (params: EChartsTooltipItem | EChartsTooltipItem[]) => {
         const p = Array.isArray(params) ? params : [params]
+        if (!p[0]) return ''
         return `${p[0].axisValue}<br/>${meta.label}: <b>${p[0].value ?? '—'} ${meta.unit}</b>`
       },
     },

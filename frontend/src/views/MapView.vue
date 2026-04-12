@@ -108,7 +108,8 @@ interface SiteSummary {
   siteId: string
   locationName: string
   riverName: string
-  [key: string]: string | number | undefined
+  detectedOrganisms: string[]
+  [key: string]: string | number | undefined | string[]
 }
 
 const router = useRouter()
@@ -116,7 +117,7 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api
 
 // Map State
 const zoom = ref(10)
-const center = ref([-25.747, 28.229]) // Pretoria Coordinates [Lat, Lng]
+const center = ref<[number, number]>([-25.747, 28.229]) // Pretoria Coordinates [Lat, Lng]
 
 // Data State
 const filterOptions = reactive({ rivers: [] as string[], organisms: [] as string[], sirProfiles: [] as string[] })
