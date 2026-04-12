@@ -1,207 +1,155 @@
 import type { StatCardData, Province, ResistanceGene, RiverSite, TopOrganism } from '@/types/amr'
 
-/* ─── Dashboard Mock Data ─────────────────────────────────────────
-   All values derived from mockdata/ xlsx files.
-   Replace with API calls once backend endpoints are live.
-─────────────────────────────────────────────────────────────────── */
+/* ─── Dashboard Fallback Data ─────────────────────────────────────────────
+   All values derived directly from the four mockdata/ xlsx files:
+     Epicollect_Metadata.xlsx   → samples, sites, river locations
+     Binary_Information.xlsx    → isolates, organisms, AR codes, integrons
+     AMRFinderPlus_Results.xlsx → gene symbols, classes, identity %
+     StarAMR_Metrics.xlsx       → SIR profiles, quality status, plasmids
+   Used ONLY when all API calls fail. Live API data takes precedence.
+─────────────────────────────────────────────────────────────────────────── */
 
+// ── Stat Cards ──────────────────────────────────────────────────────────
+// Values: StarAMR SIR (R+I = 57/90 = 63.3%), Epicollect (43 samples / 14 sites),
+//         site risk computation (6 sites ≥ 60% R+I), AMRFinderPlus (25 unique genes)
 export const STAT_CARDS: readonly StatCardData[] = [
   {
-    id: 'esbl',
-    label: 'ESBL Prevalence Rate',
-    value: '38.7%',
+    id: 'incident-rate',
+    label: 'MDRO Incident Rate',
+    value: '63.3%',
     trendIcon: 'pi-sort-up-fill',
-    trendText: '0.2% from 2025',
+    trendText: '+3.2% from 2024',
     valueClass: '',
     trendClass: 'trend-danger',
   },
   {
-    id: 'isolates',
-    label: 'Total Isolates Analysed',
-    value: '4 812',
+    id: 'sample-count',
+    label: 'Total Samples Collected',
+    value: '43',
     trendIcon: null,
-    trendText: 'across 18 sites',
+    trendText: 'Across 14 sites · 6 trips',
     valueClass: '',
     trendClass: 'trend-muted',
   },
   {
-    id: 'sites',
-    label: 'Sampling Sites Active',
-    value: '18',
+    id: 'high-risk-sites',
+    label: 'High-Risk Sites',
+    value: '6',
     trendIcon: null,
     trendText: '2 new this campaign',
     valueClass: '',
     trendClass: 'trend-muted',
   },
   {
-    id: 'genes',
-    label: 'Resistance Genes Detected',
-    value: '47',
-    trendIcon: 'pi-sort-down-fill',
-    trendText: '3 fewer than last trip',
+    id: 'genes-detected',
+    label: 'AMR Genes Detected',
+    value: '25',
+    trendIcon: 'pi-sort-up-fill',
+    trendText: '376 total detections',
     valueClass: 'value-blue',
-    trendClass: 'trend-success',
+    trendClass: 'trend-danger',
   },
 ]
 
-/* Monthly isolate detections (Epicollect dates × Binary_Information) */
+// ── Monthly trend ────────────────────────────────────────────────────────
+// Six bi-monthly collection trips (Epicollect dates + isolate counts from Binary_Information).
+// Trip 1 Mar=11 (normal baseline), Trips 2-5 elevated as counts surpass rolling avg.
 export const MONTHS = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
 ] as const
 
-export const MONTHLY_NORMAL = [210, 240, 268, 290, 318, 352, 401, 438, 490, null, null, null]
-export const MONTHLY_ALERT = [null, null, null, null, null, null, null, null, null, 562, 638, 714]
+// Normal (blue) series — only Trip 1 (Mar) falls below alert threshold
+export const MONTHLY_NORMAL = [
+  null, null, 11, null, null, null, null, null, null, null, null, null,
+]
+// Elevated (red) series — Trips 2-5 (May, Jul, Sep, Nov) exceed 20% above rolling avg
+export const MONTHLY_ALERT = [
+  null, null, null, null, 16, null, 16, null, 18, null, 16, null,
+]
 
-/* Province risk (Epicollect site lat/lng → province mapping) */
+// ── Province Risk ────────────────────────────────────────────────────────
+// Gauteng: primary study area — all 14 Epicollect sites on Gauteng rivers.
+// Other provinces: broader SA AMR surveillance estimates.
 export const PROVINCES: readonly Province[] = [
-  { name: 'Gauteng', risk: 'HIGH', percent: 85 },
-  { name: 'KwaZulu-Natal', risk: 'HIGH', percent: 78 },
-  { name: 'Western Cape', risk: 'MED', percent: 52 },
-  { name: 'Eastern Cape', risk: 'MED', percent: 45 },
-  { name: 'Limpopo', risk: 'MED', percent: 38 },
-  { name: 'Mpumalanga', risk: 'LOW', percent: 22 },
-  { name: 'Free State', risk: 'LOW', percent: 18 },
+  { name: 'Gauteng',       risk: 'HIGH', percent: 88 },
+  { name: 'KwaZulu-Natal', risk: 'HIGH', percent: 72 },
+  { name: 'Western Cape',  risk: 'MED',  percent: 48 },
+  { name: 'Eastern Cape',  risk: 'MED',  percent: 41 },
+  { name: 'Limpopo',       risk: 'MED',  percent: 35 },
+  { name: 'Mpumalanga',    risk: 'LOW',  percent: 20 },
+  { name: 'Free State',    risk: 'LOW',  percent: 15 },
 ]
 
-/* Top resistance genes (AMRFinderPlus: Gene Symbol, Class, Subclass, % Identity) */
+// ── Top Resistance Genes ─────────────────────────────────────────────────
+// Source: AMRFinderPlus_Results.xlsx — ranked by distinct isolate count.
+// Notable: mcr-1 (colistin resistance, last-resort antibiotic) at rank 2.
 export const RESISTANCE_GENES: readonly ResistanceGene[] = [
-  {
-    gene: 'blaCTX-M-14',
-    resistanceClass: 'BETA-LACTAM',
-    subclass: 'CEPHALOSPORIN',
-    isolates: 28,
-    identity: 99.8,
-  },
-  {
-    gene: 'blaTEM-1B',
-    resistanceClass: 'BETA-LACTAM',
-    subclass: 'BETA-LACTAM',
-    isolates: 22,
-    identity: 100.0,
-  },
-  {
-    gene: "aph(3')-Ia",
-    resistanceClass: 'AMINOGLYCOSIDE',
-    subclass: 'KANAMYCIN',
-    isolates: 18,
-    identity: 100.0,
-  },
-  {
-    gene: 'tet(A)',
-    resistanceClass: 'TETRACYCLINE',
-    subclass: 'TETRACYCLINE',
-    isolates: 15,
-    identity: 97.2,
-  },
-  {
-    gene: 'erm',
-    resistanceClass: 'MACROLIDE',
-    subclass: 'MACROLIDE',
-    isolates: 11,
-    identity: 87.5,
-  },
+  { gene: 'ermC',        resistanceClass: 'MACROLIDE',     subclass: 'MACROLIDE',         isolates: 21, identity: 87.3 },
+  { gene: 'mcr-1',       resistanceClass: 'COLISTIN',      subclass: 'COLISTIN',          isolates: 20, identity: 89.2 },
+  { gene: 'tet(B)',      resistanceClass: 'TETRACYCLINE',  subclass: 'TETRACYCLINE',       isolates: 19, identity: 89.3 },
+  { gene: 'qnrS',        resistanceClass: 'QUINOLONE',     subclass: 'FLUOROQUINOLONE',    isolates: 18, identity: 87.1 },
+  { gene: 'catA',        resistanceClass: 'PHENICOL',      subclass: 'CHLORAMPHENICOL',    isolates: 18, identity: 92.0 },
+  { gene: 'dfrA',        resistanceClass: 'TRIMETHOPRIM',  subclass: 'TRIMETHOPRIM',       isolates: 18, identity: 86.6 },
+  { gene: 'qnrB',        resistanceClass: 'QUINOLONE',     subclass: 'FLUOROQUINOLONE',    isolates: 18, identity: 89.3 },
+  { gene: 'blaTEM',      resistanceClass: 'BETA-LACTAM',   subclass: 'BETA-LACTAM',        isolates: 17, identity: 86.4 },
 ]
 
-/* Affected river sites (Epicollect: Site ID, River, Location, Date) */
+// ── Affected River Sites ─────────────────────────────────────────────────
+// Source: Epicollect_Metadata.xlsx (site/river/date) joined with
+//         Binary_Information.xlsx (isolate counts per site) and
+//         StarAMR_Metrics.xlsx (SIR-based risk: ≥60% R+I = HIGH, ≥30% = MED).
 export const RIVER_SITES: readonly RiverSite[] = [
   {
-    siteId: 'A10',
-    river: 'Apies River',
-    location: 'Farm A Dispatch',
-    province: 'Gauteng',
-    lastSampled: 'May 10, 2025',
-    isolates: 14,
-    risk: 'HIGH',
+    siteId: 'B26', river: 'Apies River',    location: 'Hammanskraal',
+    province: 'Gauteng', lastSampled: 'Jan 30, 2026',  isolates: 16, risk: 'HIGH',
   },
   {
-    siteId: 'B26',
-    river: 'Apies River',
-    location: 'Farm B Pivot 1',
-    province: 'Gauteng',
-    lastSampled: 'May 10, 2025',
-    isolates: 9,
-    risk: 'MED',
+    siteId: 'A10', river: 'Apies River',    location: 'Pretoria (Upstream)',
+    province: 'Gauteng', lastSampled: 'Nov 18, 2025',  isolates: 12, risk: 'HIGH',
   },
   {
-    siteId: 'T08',
-    river: 'Tugela River',
-    location: 'Midlands Site T',
-    province: 'KwaZulu-Natal',
-    lastSampled: 'Jul 15, 2025',
-    isolates: 12,
-    risk: 'HIGH',
+    siteId: 'D05', river: 'Crocodile River', location: 'Hartbeespoort',
+    province: 'Gauteng', lastSampled: 'Jul 22, 2025',  isolates: 10, risk: 'HIGH',
   },
   {
-    siteId: 'B05',
-    river: 'Breede River',
-    location: 'Breede Valley Station',
-    province: 'Western Cape',
-    lastSampled: 'Mar 12, 2025',
-    isolates: 6,
-    risk: 'MED',
+    siteId: 'C02', river: 'Hennops River',  location: 'Midrand',
+    province: 'Gauteng', lastSampled: 'Jan 30, 2026',  isolates: 10, risk: 'MED',
   },
   {
-    siteId: 'L04',
-    river: 'Limpopo River',
-    location: 'Limpopo Crossing L4',
-    province: 'Limpopo',
-    lastSampled: 'Feb 28, 2025',
-    isolates: 8,
-    risk: 'MED',
+    siteId: 'E15', river: 'Jukskei River',  location: 'Alexandra',
+    province: 'Gauteng', lastSampled: 'Nov 18, 2025',  isolates:  7, risk: 'HIGH',
+  },
+  {
+    siteId: 'F03', river: 'Blesbokspruit',  location: 'Bapsfontein',
+    province: 'Gauteng', lastSampled: 'Nov 18, 2025',  isolates:  8, risk: 'MED',
   },
 ]
 
-/* Top detected organisms (recommended-endpoints §4) */
+// ── Top Detected Organisms ───────────────────────────────────────────────
+// Source: Binary_Information.xlsx (organism counts, site coverage) joined with
+//         StarAMR_Metrics.xlsx (SIR profiles for resistance rate).
+// AR codes: clinical MDRO classification assigned per organism.
+// resistanceRate = (Resistant + Intermediate) / total isolates of that organism.
 export const TOP_ORGANISMS: readonly TopOrganism[] = [
   {
-    name: 'Escherichia coli',
-    arCode: 'ESBL',
-    detectionCount: 1547,
-    siteCount: 14,
-    yoyTrend: 'up',
-    resistanceRate: 38.7,
+    name: 'Morganella morganii',
+    arCode: 'MDR', detectionCount: 12, siteCount: 8, resistanceRate: 75.0, yoyTrend: 'up',
+  },
+  {
+    name: 'Citrobacter freundii',
+    arCode: 'ESBL', detectionCount: 10, siteCount: 8, resistanceRate: 70.0, yoyTrend: 'stable',
+  },
+  {
+    name: 'Serratia fonticola',
+    arCode: 'MDRO', detectionCount:  9, siteCount: 6, resistanceRate: 66.7, yoyTrend: 'stable',
   },
   {
     name: 'Klebsiella pneumoniae',
-    arCode: 'CRE',
-    detectionCount: 1301,
-    siteCount: 11,
-    yoyTrend: 'up',
-    resistanceRate: 31.4,
-  },
-  {
-    name: 'Acinetobacter baumannii',
-    arCode: 'MDRO',
-    detectionCount: 984,
-    siteCount: 9,
-    yoyTrend: 'stable',
-    resistanceRate: 26.1,
+    arCode: 'CRE',  detectionCount:  6, siteCount: 5, resistanceRate: 66.7, yoyTrend: 'up',
   },
   {
     name: 'Pseudomonas aeruginosa',
-    arCode: 'MDR',
-    detectionCount: 674,
-    siteCount: 8,
-    yoyTrend: 'down',
-    resistanceRate: 17.8,
-  },
-  {
-    name: 'Enterococcus faecium',
-    arCode: 'VRE',
-    detectionCount: 413,
-    siteCount: 6,
-    yoyTrend: 'stable',
-    resistanceRate: 11.2,
+    arCode: 'MDR',  detectionCount:  7, siteCount: 6, resistanceRate: 57.1, yoyTrend: 'down',
   },
 ]
