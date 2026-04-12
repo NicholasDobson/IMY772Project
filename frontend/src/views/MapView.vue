@@ -106,8 +106,8 @@ const center = ref([-25.747, 28.229]) // Pretoria Coordinates [Lat, Lng]
 // Data State
 const filterOptions = reactive({ rivers: [], organisms: [], sirProfiles: [] })
 const selectedFilters = reactive({ riverName: '', organism: '', sirProfile: '' })
-const activeMarkers = ref<any[]>([])
-const siteSummary = ref<any>(null)
+const activeMarkers = ref<Record<string, unknown>[]>([])
+const siteSummary = ref<Record<string, unknown> | null>(null)
 
 // Lifecycle
 onMounted(async () => {
