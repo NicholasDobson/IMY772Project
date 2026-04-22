@@ -27,7 +27,7 @@ const router = createRouter({
     {
       path: '/education',
       name: 'education',
-      component: () => import('../views/EducationView.vue'),
+      component: () => import('../views/BlogView.vue'),
     },
     {
       path: '/upload',
@@ -38,6 +38,11 @@ const router = createRouter({
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),
+    },
+    {
+      path: '/blog/create',
+      name: 'create-blog',
+      component: () => import('../views/CreateBlogView.vue'),
     },
     {
       path: '/bacteria/:name',

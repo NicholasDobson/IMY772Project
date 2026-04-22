@@ -8,7 +8,7 @@ const navItems = [
   { name: 'Dashboard', path: '/', icon: 'pi-objects-column' },
   { name: 'Map', path: '/map', icon: 'pi-map' },
   { name: 'River detail', path: '/river', icon: 'pi-chart-line' },
-  { name: 'Education Blog', path: '/education', icon: 'pi-book' },
+  { name: 'Education', path: '/education', icon: 'pi-book' },
   { name: 'Data Upload', path: '/upload', icon: 'pi-upload' },
 ]
 
