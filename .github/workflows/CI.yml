@@ -114,16 +114,9 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      - name: Start dev server
-        working-directory: ./frontend
-        run: npm run dev &
-
-      - name: Wait for server
-        run: sleep 5
-
       - name: Run frontend E2E tests
         working-directory: ./frontend
-        run: npm run test:e2e -- --project=chromium --workers=4
+        run: npm run test:e2e -- --project=chromium
 
       - name: Upload Playwright report
         if: always()
