@@ -10,12 +10,35 @@ const router = useRouter()
 const title = ref('')
 const author = ref('')
 const content = ref('')
-const image = ref('')
+const selectedFile = ref<File | null>(null)
+const imagePreview = ref<string | null>(null)
+const fileError = ref('')
 const loading = ref(false)
 const error = ref('')
 const success = ref(false)
 
 /* ── Methods ──────────────────────────────────────────────────── */
+const handleFileChange = (event: Event) => {
+  const file = (event.target as HTMLInputElement).files?.[0] ?? null
+  if (!file) {
+    selectedFile.value = null
+    imagePreview.value = null
+    fileError.value = ''
+    return
+  }
+
+  if (!file.type.startsWith('image/')) {
+    fileError.value = 'Please select a valid image file'
+    selectedFile.value = null
+    imagePreview.value = null
+    return
+  }
+
+  selectedFile.value = file
+  fileError.value = ''
+  imagePreview.value = URL.createObjectURL(file)
+}
+
 const handleSubmit = async () => {
   if (!title.value || !author.value || !content.value) {
     error.value = 'Please fill in all required fields'
@@ -25,17 +48,18 @@ const handleSubmit = async () => {
   loading.value = true
   error.value = ''
 
+  const formData = new FormData()
+  formData.append('title', title.value)
+  formData.append('author', author.value)
+  formData.append('content', content.value)
+  if (selectedFile.value) {
+    formData.append('image', selectedFile.value)
+  }
+
   try {
-    await createBlog({
-      title: title.value,
-      author: author.value,
-      content: content.value,
-      image: image.value || undefined,
-    })
+    await createBlog(formData)
     success.value = true
-    setTimeout(() => {
-      router.push('/blog')
-    }, 1500)
+    router.push({ name: 'education' })
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'Failed to create blog'
   } finally {
@@ -44,7 +68,7 @@ const handleSubmit = async () => {
 }
 
 const handleCancel = () => {
-  router.push('/blog')
+  router.push({ name: 'education' })
 }
 </script>
 
@@ -94,18 +118,24 @@ const handleCancel = () => {
           />
         </div>
 
-        <!-- Image URL Field -->
+        <!-- Image Upload Field -->
         <div class="form-group">
-          <label for="image" class="form-label">Image URL</label>
+          <label for="image" class="form-label">Featured Image</label>
           <input
             id="image"
-            v-model="image"
-            type="url"
+            type="file"
+            accept="image/*"
             class="form-input"
-            placeholder="https://example.com/image.jpg"
+            @change="handleFileChange"
             :disabled="loading || success"
           />
-          <p class="form-hint">Optional: Provide a URL to an image for the blog card</p>
+          <p class="form-hint">Optional: Upload a local image file for the blog card</p>
+          <div v-if="fileError" class="error-message">
+            {{ fileError }}
+          </div>
+          <div v-if="imagePreview" class="image-preview-container">
+            <img :src="imagePreview" alt="Selected image preview" class="image-preview" />
+          </div>
         </div>
 
         <!-- Content Field -->
@@ -234,6 +264,18 @@ const handleCancel = () => {
   color: var(--c-text-muted);
   font-family: 'DM Sans', sans-serif;
   margin-top: 0.25rem;
+}
+
+.image-preview-container {
+  margin-top: 0.75rem;
+}
+
+.image-preview {
+  display: block;
+  max-width: 240px;
+  width: 100%;
+  border-radius: 0.5rem;
+  border: 1px solid var(--c-border);
 }
 
 .success-message {

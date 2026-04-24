@@ -27,6 +27,7 @@ const router = createRouter({
     {
       path: '/education',
       name: 'education',
+      alias: '/blog',
       component: () => import('../views/BlogView.vue'),
     },
     {

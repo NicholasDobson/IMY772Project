@@ -61,7 +61,16 @@ export async function getBlogById(blogId: number): Promise<Blog> {
   return get<Blog>(`${BASE}/${blogId}`)
 }
 
-export async function createBlog(blog: Omit<Blog, 'blogId' | 'datePublished'>): Promise<Blog> {
+export async function createBlog(blog: Omit<Blog, 'blogId' | 'datePublished'> | FormData): Promise<Blog> {
+  if (blog instanceof FormData) {
+    const res = await fetch(BASE, {
+      method: 'POST',
+      body: blog,
+    })
+    if (!res.ok) throw new Error(`API ${res.status}: ${BASE}`)
+    return res.json() as Promise<Blog>
+  }
+
   return post<Blog>(BASE, blog)
 }
 
