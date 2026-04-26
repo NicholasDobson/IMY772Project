@@ -1,5 +1,8 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import DataTable from 'primevue/datatable'
+import Column from 'primevue/column'
+import Tag from 'primevue/tag'
 
 interface CognitoUser {
   username: string
@@ -13,6 +16,9 @@ const users = ref<CognitoUser[]>([])
 const loading = ref(true)
 const error = ref<string | null>(null)
 const pending = ref<Set<string>>(new Set())
+
+const totalUsers = computed(() => users.value.length)
+const totalAdmins = computed(() => users.value.filter((u) => u.isAdmin).length)
 
 async function fetchUsers() {
   loading.value = true
@@ -32,7 +38,10 @@ async function toggleAdmin(user: CognitoUser) {
   pending.value = new Set([...pending.value, user.username])
   const method = user.isAdmin ? 'DELETE' : 'POST'
   try {
-    const res = await fetch(`${API_BASE}/admin/users/${encodeURIComponent(user.username)}/promote`, { method })
+    const res = await fetch(
+      `${API_BASE}/admin/users/${encodeURIComponent(user.username)}/promote`,
+      { method },
+    )
     if (!res.ok) throw new Error(`Request failed (${res.status})`)
     user.isAdmin = !user.isAdmin
   } catch (e: unknown) {
@@ -48,162 +57,253 @@ onMounted(fetchUsers)
 </script>
 
 <template>
-  <div class="page">
+  <div class="um-page">
+    <!-- Page header -->
     <div class="page-header">
       <h1 class="page-title">User Management</h1>
-      <p class="page-subtitle">Manage Cognito users and admin group membership</p>
     </div>
 
-    <div v-if="loading" class="state-msg">Loading users…</div>
-    <div v-else-if="error" class="state-msg state-msg--error">{{ error }}</div>
+    <!-- Summary cards -->
+    <section class="summary-row">
+      <div class="summary-card">
+        <span class="summary-value">{{ totalUsers }}</span>
+        <span class="summary-label">Total Users</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value summary-value--brand">{{ totalAdmins }}</span>
+        <span class="summary-label">Admins</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-value">{{ totalUsers - totalAdmins }}</span>
+        <span class="summary-label">Standard Users</span>
+      </div>
+    </section>
 
-    <div v-else class="table-wrap">
-      <table class="user-table">
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Username</th>
-            <th>Role</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="user in users" :key="user.username">
-            <td>{{ user.email || '—' }}</td>
-            <td class="username-cell">{{ user.username }}</td>
-            <td>
-              <span class="badge" :class="user.isAdmin ? 'badge--admin' : 'badge--user'">
-                {{ user.isAdmin ? 'Admin' : 'User' }}
-              </span>
-            </td>
-            <td>
-              <button
-                class="btn"
-                :class="user.isAdmin ? 'btn--danger' : 'btn--promote'"
-                :disabled="pending.has(user.username)"
-                @click="toggleAdmin(user)"
-              >
-                {{ pending.has(user.username) ? '…' : user.isAdmin ? 'Remove admin' : 'Make admin' }}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <!-- Error banner -->
+    <div v-if="error" class="error-banner">
+      <i class="pi pi-exclamation-triangle"></i> {{ error }}
+    </div>
+
+    <!-- Table panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">All Users</h2>
+        <span class="panel-subtitle">Cognito User Pool · {{ totalUsers }} accounts</span>
+      </div>
+
+      <DataTable
+        :value="users"
+        :loading="loading"
+        class="um-table"
+        size="small"
+        striped-rows
+      >
+        <Column field="email" header="Email">
+          <template #body="{ data }">
+            <span class="email-cell">{{ data.email || '—' }}</span>
+          </template>
+        </Column>
+
+        <Column field="username" header="Username" style="width: 300px">
+          <template #body="{ data }">
+            <code class="username-cell">{{ data.username }}</code>
+          </template>
+        </Column>
+
+        <Column field="isAdmin" header="Role" style="width: 90px">
+          <template #body="{ data }">
+            <Tag
+              :value="data.isAdmin ? 'Admin' : 'User'"
+              :severity="data.isAdmin ? 'info' : 'secondary'"
+            />
+          </template>
+        </Column>
+
+        <Column header="Action" style="width: 130px; text-align: right">
+          <template #body="{ data }">
+            <button
+              class="action-btn"
+              :class="data.isAdmin ? 'action-btn--remove' : 'action-btn--promote'"
+              :disabled="pending.has(data.username)"
+              @click="toggleAdmin(data)"
+            >
+              <i
+                v-if="pending.has(data.username)"
+                class="pi pi-spin pi-spinner"
+                style="font-size: 11px"
+              ></i>
+              <template v-else>
+                <i :class="data.isAdmin ? 'pi pi-minus-circle' : 'pi pi-plus-circle'"></i>
+                {{ data.isAdmin ? 'Remove admin' : 'Make admin' }}
+              </template>
+            </button>
+          </template>
+        </Column>
+      </DataTable>
     </div>
   </div>
 </template>
 
 <style scoped>
-.page {
-  padding: 28px 32px;
-  max-width: 900px;
+.um-page {
+  padding: 0 28px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
 }
 
+/* Header */
 .page-header {
-  margin-bottom: 24px;
+  padding: 22px 0 14px;
+  text-align: center;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .page-title {
-  font-size: 22px;
-  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 18px;
+  font-weight: 400;
   color: var(--c-heading);
-  margin: 0 0 4px;
+  letter-spacing: 0.01em;
 }
 
-.page-subtitle {
-  font-size: 13px;
-  color: var(--c-text-muted);
-  margin: 0;
+/* Summary cards */
+.summary-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
 }
 
-.state-msg {
-  font-size: 14px;
-  color: var(--c-text-muted);
-  padding: 24px 0;
-}
-
-.state-msg--error {
-  color: #e05252;
-}
-
-.table-wrap {
+.summary-card {
+  background: var(--c-card);
   border: 1px solid var(--c-border);
   border-radius: 8px;
-  overflow: hidden;
+  padding: 18px 20px;
+  box-shadow: var(--c-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
 
-.user-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
+.summary-value {
+  font-family: 'DM Mono', monospace;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--c-heading);
+  line-height: 1;
 }
 
-.user-table th {
-  background: var(--c-sidebar);
+.summary-value--brand {
+  color: var(--c-brand);
+}
+
+.summary-label {
+  font-size: 11.5px;
   color: var(--c-text-muted);
-  font-weight: 500;
-  padding: 10px 16px;
-  text-align: left;
-  border-bottom: 1px solid var(--c-border);
+  font-weight: 400;
 }
 
-.user-table td {
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--c-border);
-  color: var(--c-text);
+/* Error banner */
+.error-banner {
+  background: var(--c-red-dim, #fef2f2);
+  border: 1px solid var(--c-risk-high, #ef4444);
+  color: var(--c-risk-high, #ef4444);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
-.user-table tr:last-child td {
-  border-bottom: none;
+/* Panel */
+.panel {
+  background: var(--c-card);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 18px 20px;
+  box-shadow: var(--c-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.panel-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.panel-title {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--c-heading);
+}
+
+.panel-subtitle {
+  font-size: 10.5px;
+  color: var(--c-text-dim);
+}
+
+/* Table cells */
+.um-table {
+  font-family: 'DM Sans', sans-serif;
+}
+
+.email-cell {
+  font-size: 13px;
+  color: var(--c-heading);
 }
 
 .username-cell {
-  font-family: monospace;
+  font-family: 'DM Mono', 'JetBrains Mono', monospace;
   font-size: 11px;
   color: var(--c-text-muted);
-}
-
-.badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.badge--admin {
-  background: #dbeafe;
-  color: #1d4ed8;
-}
-
-.badge--user {
   background: var(--c-nav-active);
-  color: var(--c-text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
 }
 
-.btn {
-  padding: 5px 12px;
+/* Action buttons */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
   border-radius: 5px;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
+  font-family: 'DM Sans', sans-serif;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: opacity 0.12s;
+  transition: opacity 0.12s, background 0.12s;
 }
 
-.btn:disabled {
+.action-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
 
-.btn--promote {
+.action-btn--promote {
   background: var(--c-brand);
   color: #fff;
 }
 
-.btn--danger {
+.action-btn--promote:hover:not(:disabled) {
+  opacity: 0.85;
+}
+
+.action-btn--remove {
   background: transparent;
-  border-color: #e05252;
-  color: #e05252;
+  border-color: var(--c-risk-high, #ef4444);
+  color: var(--c-risk-high, #ef4444);
+}
+
+.action-btn--remove:hover:not(:disabled) {
+  background: var(--c-red-dim, #fef2f2);
 }
 </style>
