@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import { onMounted } from 'vue'
 import AppSidebar from '@/components/layout/AppSidebar.vue'
+import FloatingAdvisor from '@/components/advisor/FloatingAdvisor.vue'
 import { useThemeStore } from '@/stores/theme'
+import { useAuthStore } from '@/stores/auth'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 
-onMounted(() => {
+onMounted(async () => {
   themeStore.init()
+  await authStore.initialize()
 })
 </script>
 
@@ -16,6 +20,7 @@ onMounted(() => {
     <main class="app-main">
       <RouterView />
     </main>
+    <FloatingAdvisor />
   </div>
 </template>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import VChart from 'vue-echarts'
 import { use } from 'echarts/core'
@@ -107,6 +107,34 @@ const selWaterParam = ref<keyof WaterSample>('phLevel')
 
 const dataA = computed(() => ALL_SITES.value.find((s) => s.site.siteId === selectedIds.value[0]) ?? null)
 const dataB = computed(() => ALL_SITES.value.find((s) => s.site.siteId === selectedIds.value[1]) ?? null)
+
+// WGS table pagination — per-slot page state
+const WGS_PAGE_SIZE = 5
+const wgsPageA = ref(1)
+const wgsPageB = ref(1)
+
+watch(() => selectedIds.value[0], () => { wgsPageA.value = 1 })
+watch(() => selectedIds.value[1], () => { wgsPageB.value = 1 })
+
+function wgsPaged(data: SiteData | null, slot: 0 | 1) {
+  if (!data) return { rows: [] as WgsMetrics[], totalPages: 1, page: 1, total: 0 }
+  const page = slot === 0 ? wgsPageA.value : wgsPageB.value
+  const total = data.wgsMetrics.length
+  const totalPages = Math.max(1, Math.ceil(total / WGS_PAGE_SIZE))
+  const safe = Math.min(page, totalPages)
+  const start = (safe - 1) * WGS_PAGE_SIZE
+  return {
+    rows: data.wgsMetrics.slice(start, start + WGS_PAGE_SIZE),
+    totalPages,
+    page: safe,
+    total,
+  }
+}
+
+function setWgsPage(slot: 0 | 1, page: number) {
+  if (slot === 0) wgsPageA.value = page
+  else wgsPageB.value = page
+}
 
 onMounted(async () => {
   loading.value = true
@@ -379,12 +407,17 @@ const amrClassOption = computed(() => {
 })
 
 // Radar: 5 AMR/quality dimensions from actual data
-// Axes: avg pH (0-14), avg Temp (0-35), AMR gene count (0-5), IntI1 rate (0-100), WGS pass rate (0-100)
+// Axes normalised 0-100. AMR Gene Hits scale adapts to whichever site has more hits.
 const radarOption = computed(() => {
-  const toScore = (data: SiteData | null) => [
-    +(((avgWater(data, 'phLevel') ?? 0) / 14) * 100).toFixed(1),
-    +(((avgWater(data, 'dissolvedOxygen') ?? 0) / 14) * 100).toFixed(1),
-    +(((data?.amrSequences.length ?? 0) / 5) * 100).toFixed(1),
+  const maxAmr = Math.max(
+    dataA.value?.amrSequences.length ?? 0,
+    dataB.value?.amrSequences.length ?? 0,
+    1,
+  )
+  const toScore = (data: SiteData | null, slot: 0 | 1) => [
+    +(((avgWater(data, 'phLevel', slot) ?? 0) / 14) * 100).toFixed(1),
+    +(((avgWater(data, 'dissolvedOxygen', slot) ?? 0) / 15) * 100).toFixed(1),
+    +(((data?.amrSequences.length ?? 0) / maxAmr) * 100).toFixed(1),
     +intl1Rate(data).toFixed(1),
     +wgsPassRate(data).toFixed(1),
   ]
@@ -411,14 +444,14 @@ const radarOption = computed(() => {
         data: [
           {
             name: labelA.value,
-            value: toScore(dataA.value),
+            value: toScore(dataA.value, 0),
             lineStyle: { color: COLORS[0], width: 2 },
             itemStyle: { color: COLORS[0] },
             areaStyle: { color: COLORS[0] + '33' },
           },
           {
             name: labelB.value,
-            value: toScore(dataB.value),
+            value: toScore(dataB.value, 1),
             lineStyle: { color: COLORS[1], width: 2 },
             itemStyle: { color: COLORS[1] },
             areaStyle: { color: COLORS[1] + '33' },
@@ -732,7 +765,12 @@ const metricRows = computed(() => [
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="wgs in data.wgsMetrics" :key="wgs.isolateId">
+                  <tr v-if="!wgsPaged(data, idx as 0 | 1).rows.length">
+                    <td colspan="5" class="dim" style="text-align: center; padding: 16px">
+                      No WGS records.
+                    </td>
+                  </tr>
+                  <tr v-for="wgs in wgsPaged(data, idx as 0 | 1).rows" :key="wgs.isolateId">
                     <td class="mono dim">{{ wgs.isolateId }}</td>
                     <td>
                       <span
@@ -741,8 +779,8 @@ const metricRows = computed(() => [
                         >{{ wgs.qualityStatus }}</span
                       >
                     </td>
-                    <td class="dim" style="font-size: 11px; max-width: 160px">
-                      {{ wgs.predictedPhenotype }}
+                    <td class="dim phenotype-cell" :title="wgs.predictedPhenotype">
+                      {{ wgs.predictedPhenotype || '—' }}
                     </td>
                     <td>
                       <span
@@ -754,10 +792,38 @@ const metricRows = computed(() => [
                         >{{ wgs.sirProfile }}</span
                       >
                     </td>
-                    <td class="mono dim" style="font-size: 10.5px">{{ wgs.plasmid }}</td>
+                    <td class="mono dim plasmid-cell" :title="wgs.plasmid">{{ wgs.plasmid || '—' }}</td>
                   </tr>
                 </tbody>
               </table>
+              <div
+                v-if="wgsPaged(data, idx as 0 | 1).total > 0"
+                class="wgs-pagination"
+              >
+                <span class="wgs-pagination-info">
+                  Page {{ wgsPaged(data, idx as 0 | 1).page }} of
+                  {{ wgsPaged(data, idx as 0 | 1).totalPages }} ·
+                  {{ wgsPaged(data, idx as 0 | 1).total }} total
+                </span>
+                <div class="wgs-pagination-buttons">
+                  <button
+                    class="page-btn"
+                    :disabled="wgsPaged(data, idx as 0 | 1).page <= 1"
+                    @click="setWgsPage(idx as 0 | 1, wgsPaged(data, idx as 0 | 1).page - 1)"
+                  >
+                    <i class="pi pi-chevron-left"></i> Prev
+                  </button>
+                  <button
+                    class="page-btn"
+                    :disabled="
+                      wgsPaged(data, idx as 0 | 1).page >= wgsPaged(data, idx as 0 | 1).totalPages
+                    "
+                    @click="setWgsPage(idx as 0 | 1, wgsPaged(data, idx as 0 | 1).page + 1)"
+                  >
+                    Next <i class="pi pi-chevron-right"></i>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </template>
@@ -1187,5 +1253,63 @@ const metricRows = computed(() => [
   border-radius: 4px;
   font-size: 10.5px;
   font-weight: 600;
+}
+
+.phenotype-cell {
+  font-size: 11px;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.plasmid-cell {
+  font-size: 10.5px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wgs-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-top: 1px solid var(--c-border);
+  background: var(--c-card);
+  font-size: 11px;
+}
+.wgs-pagination-info {
+  color: var(--c-text-muted);
+  font-family: 'DM Sans', sans-serif;
+}
+.wgs-pagination-buttons {
+  display: flex;
+  gap: 6px;
+}
+.page-btn {
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+  background: transparent;
+  color: var(--c-text);
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+.page-btn:hover:not(:disabled) {
+  border-color: var(--c-brand);
+  color: var(--c-brand);
+}
+.page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.page-btn .pi {
+  font-size: 9px;
 }
 </style>

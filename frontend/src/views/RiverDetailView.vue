@@ -236,6 +236,60 @@ function matrixColor(s: string) { return s === 'Resistant' ? (isDark.value ? '#E
 function matrixTextColor(s: string) { return s === 'Resistant' ? (isDark.value ? '#F87171' : '#DC2626') : s === 'Intermediate' ? (isDark.value ? '#FBBF24' : '#D97706') : s === 'Susceptible' ? (isDark.value ? '#34D399' : '#059669') : (isDark.value ? '#374D61' : '#9CA3AF') }
 function matrixLabel(s: string) { return s === 'Resistant' ? 'R' : s === 'Intermediate' ? 'I' : s === 'Susceptible' ? 'S' : '—' }
 
+// ── Pagination ─────────────────────────────────────────────────────
+const PAGE_SIZE = 10
+const matrixPage   = ref(1)
+const isolatesPage = ref(1)
+const amrPage      = ref(1)
+const wgsPage      = ref(1)
+const samplesPage  = ref(1)
+
+watch(() => detail.value?.site.siteId, () => {
+  matrixPage.value = 1
+  isolatesPage.value = 1
+  amrPage.value = 1
+  wgsPage.value = 1
+  samplesPage.value = 1
+})
+
+function pageSlice<T>(arr: T[], page: number): T[] {
+  const start = (page - 1) * PAGE_SIZE
+  return arr.slice(start, start + PAGE_SIZE)
+}
+function totalPages(len: number): number {
+  return Math.max(1, Math.ceil(len / PAGE_SIZE))
+}
+function clampPage(pageRef: { value: number }, len: number) {
+  const max = totalPages(len)
+  if (pageRef.value > max) pageRef.value = max
+  if (pageRef.value < 1)   pageRef.value = 1
+}
+
+const pagedMatrixRows = computed(() => {
+  clampPage(matrixPage, resistanceMatrix.value.rows.length)
+  return pageSlice(resistanceMatrix.value.rows, matrixPage.value)
+})
+const pagedIsolates = computed(() => {
+  if (!detail.value) return []
+  clampPage(isolatesPage, detail.value.isolates.length)
+  return pageSlice(detail.value.isolates, isolatesPage.value)
+})
+const pagedAmr = computed(() => {
+  if (!detail.value) return []
+  clampPage(amrPage, detail.value.amrSequences.length)
+  return pageSlice(detail.value.amrSequences, amrPage.value)
+})
+const pagedWgs = computed(() => {
+  if (!detail.value) return []
+  clampPage(wgsPage, detail.value.wgsMetrics.length)
+  return pageSlice(detail.value.wgsMetrics, wgsPage.value)
+})
+const pagedSamples = computed(() => {
+  if (!detail.value) return []
+  clampPage(samplesPage, detail.value.waterSamples.length)
+  return pageSlice(detail.value.waterSamples, samplesPage.value)
+})
+
 const safetyRating = computed(() => {
   if (!detail.value) return null
   const wgs = detail.value.wgsMetrics
@@ -376,7 +430,7 @@ const safetyRating = computed(() => {
             <table class="matrix-table">
               <thead><tr><th class="matrix-th-isolate">Isolate</th><th v-for="ab in resistanceMatrix.antibiotics" :key="ab" class="matrix-th-drug" :title="ab"><span class="drug-label">{{ ab }}</span></th></tr></thead>
               <tbody>
-                <tr v-for="row in resistanceMatrix.rows" :key="row.isolateId">
+                <tr v-for="row in pagedMatrixRows" :key="row.isolateId">
                   <td class="matrix-isolate-cell"><span class="matrix-isolate-id">{{ row.isolateId }}</span><span class="matrix-organism">{{ row.organism }}</span></td>
                   <td v-for="(cell, ci) in row.cells" :key="ci" class="matrix-cell" :style="{ background: matrixColor(cell) }" :title="`${row.isolateId} — ${resistanceMatrix.antibiotics[ci]}: ${cell}`">
                     <span class="matrix-cell-label" :style="{ color: matrixTextColor(cell) }">{{ matrixLabel(cell) }}</span>
@@ -384,6 +438,13 @@ const safetyRating = computed(() => {
                 </tr>
               </tbody>
             </table>
+          </div>
+          <div class="pager">
+            <span class="pager-info">{{ resistanceMatrix.rows.length }} isolates · page {{ matrixPage }} of {{ totalPages(resistanceMatrix.rows.length) }}</span>
+            <div class="pager-btns">
+              <button class="pager-btn" :disabled="matrixPage <= 1" @click="matrixPage--"><i class="pi pi-chevron-left"></i> Prev</button>
+              <button class="pager-btn" :disabled="matrixPage >= totalPages(resistanceMatrix.rows.length)" @click="matrixPage++">Next <i class="pi pi-chevron-right"></i></button>
+            </div>
           </div>
         </div>
       </section>
@@ -394,7 +455,7 @@ const safetyRating = computed(() => {
           <table class="data-table">
             <thead><tr><th>Isolate ID</th><th>Sample</th><th>Organism</th><th>Source Context</th><th>Virulence Genes</th><th>Intl1</th><th>TEM</th><th>SHV</th></tr></thead>
             <tbody>
-              <tr v-for="iso in detail.isolates" :key="iso.isolateId">
+              <tr v-for="iso in pagedIsolates" :key="iso.isolateId">
                 <td class="mono">{{ iso.isolateId }}</td>
                 <td class="mono dim">{{ iso.sampleId }}</td>
                 <td class="organism-cell"><em>{{ iso.organismIdentity }}</em></td>
@@ -406,6 +467,13 @@ const safetyRating = computed(() => {
               </tr>
             </tbody>
           </table>
+          <div class="pager">
+            <span class="pager-info">{{ detail.isolates.length }} isolates · page {{ isolatesPage }} of {{ totalPages(detail.isolates.length) }}</span>
+            <div class="pager-btns">
+              <button class="pager-btn" :disabled="isolatesPage <= 1" @click="isolatesPage--"><i class="pi pi-chevron-left"></i> Prev</button>
+              <button class="pager-btn" :disabled="isolatesPage >= totalPages(detail.isolates.length)" @click="isolatesPage++">Next <i class="pi pi-chevron-right"></i></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -415,7 +483,7 @@ const safetyRating = computed(() => {
           <table class="data-table">
             <thead><tr><th>Isolate ID</th><th>Gene</th><th>Element Type</th><th>Class</th><th>Subclass</th><th style="text-align:right">Identity %</th><th style="text-align:right">Coverage %</th></tr></thead>
             <tbody>
-              <tr v-for="(seq, i) in detail.amrSequences" :key="i">
+              <tr v-for="(seq, i) in pagedAmr" :key="i">
                 <td class="mono dim">{{ seq.isolateId }}</td>
                 <td class="mono gene-name">{{ seq.geneSymbol }}</td>
                 <td><span class="type-badge" :class="seq.elementType === 'AMR' ? 'type--amr' : 'type--stress'">{{ seq.elementType }}</span></td>
@@ -426,6 +494,13 @@ const safetyRating = computed(() => {
               </tr>
             </tbody>
           </table>
+          <div class="pager">
+            <span class="pager-info">{{ detail.amrSequences.length }} gene hits · page {{ amrPage }} of {{ totalPages(detail.amrSequences.length) }}</span>
+            <div class="pager-btns">
+              <button class="pager-btn" :disabled="amrPage <= 1" @click="amrPage--"><i class="pi pi-chevron-left"></i> Prev</button>
+              <button class="pager-btn" :disabled="amrPage >= totalPages(detail.amrSequences.length)" @click="amrPage++">Next <i class="pi pi-chevron-right"></i></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -435,7 +510,7 @@ const safetyRating = computed(() => {
           <table class="data-table">
             <thead><tr><th>Isolate ID</th><th>Quality</th><th>Genotype</th><th>Predicted Phenotype</th><th>SIR Profile</th><th>Plasmid</th><th style="text-align:right">Genome (bp)</th><th style="text-align:right">N50</th></tr></thead>
             <tbody>
-              <tr v-for="wgs in detail.wgsMetrics" :key="wgs.isolateId">
+              <tr v-for="wgs in pagedWgs" :key="wgs.isolateId">
                 <td class="mono dim">{{ wgs.isolateId }}</td>
                 <td><span class="quality-badge" :class="wgs.qualityStatus?.toUpperCase() === 'PASS' ? 'quality--pass' : 'quality--fail'">{{ wgs.qualityStatus }}</span></td>
                 <td class="mono dim genotype-cell">{{ wgs.genotype }}</td>
@@ -447,6 +522,13 @@ const safetyRating = computed(() => {
               </tr>
             </tbody>
           </table>
+          <div class="pager">
+            <span class="pager-info">{{ detail.wgsMetrics.length }} records · page {{ wgsPage }} of {{ totalPages(detail.wgsMetrics.length) }}</span>
+            <div class="pager-btns">
+              <button class="pager-btn" :disabled="wgsPage <= 1" @click="wgsPage--"><i class="pi pi-chevron-left"></i> Prev</button>
+              <button class="pager-btn" :disabled="wgsPage >= totalPages(detail.wgsMetrics.length)" @click="wgsPage++">Next <i class="pi pi-chevron-right"></i></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -456,7 +538,7 @@ const safetyRating = computed(() => {
           <table class="data-table">
             <thead><tr><th>Sample ID</th><th>Trip</th><th>Date</th><th style="text-align:right">Temp (°C)</th><th style="text-align:right">pH</th><th style="text-align:right">TDS (mg/L)</th><th style="text-align:right">EC (μS/cm)</th><th style="text-align:right">DO (mg/L)</th></tr></thead>
             <tbody>
-              <tr v-for="s in detail.waterSamples" :key="s.sampleId">
+              <tr v-for="s in pagedSamples" :key="s.sampleId">
                 <td class="mono">{{ s.sampleId }}</td>
                 <td class="dim">{{ s.tripIdentifier }}</td>
                 <td class="dim">{{ s.collectionDate }}</td>
@@ -468,6 +550,13 @@ const safetyRating = computed(() => {
               </tr>
             </tbody>
           </table>
+          <div class="pager">
+            <span class="pager-info">{{ detail.waterSamples.length }} samples · page {{ samplesPage }} of {{ totalPages(detail.waterSamples.length) }}</span>
+            <div class="pager-btns">
+              <button class="pager-btn" :disabled="samplesPage <= 1" @click="samplesPage--"><i class="pi pi-chevron-left"></i> Prev</button>
+              <button class="pager-btn" :disabled="samplesPage >= totalPages(detail.waterSamples.length)" @click="samplesPage++">Next <i class="pi pi-chevron-right"></i></button>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -482,7 +571,14 @@ const safetyRating = computed(() => {
 </template>
 
 <style scoped>
-.river-detail { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
+.river-detail { padding: 0 28px 40px; display: flex; flex-direction: column; gap: 18px; }
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--c-border); background: var(--c-bg); flex-wrap: wrap; }
+.pager-info { font-size: 11px; color: var(--c-text-muted); }
+.pager-btns { display: flex; gap: 6px; }
+.pager-btn { display: inline-flex; align-items: center; gap: 4px; padding: 4px 10px; font-size: 11.5px; font-weight: 600; background: var(--c-card); color: var(--c-text); border: 1px solid var(--c-border); border-radius: 5px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: background 0.12s, border-color 0.12s; }
+.pager-btn:hover:not(:disabled) { background: var(--c-brand-dim); border-color: var(--c-brand); color: var(--c-brand); }
+.pager-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.pager-btn .pi { font-size: 10px; }
 .page-header { margin-bottom: 20px; }
 .breadcrumb-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
 .breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--c-text-muted); }

@@ -56,11 +56,6 @@ describe('useDashboardStore', () => {
     expect(store.availableYears).toEqual([])
   })
 
-  it('starts with hasIsolateData false', () => {
-    const store = useDashboardStore()
-    expect(store.hasIsolateData).toBe(false)
-  })
-
   it('statCards returns null before any fetch', () => {
     const store = useDashboardStore()
     expect(store.statCards).toBeNull()
@@ -83,20 +78,6 @@ describe('useDashboardStore', () => {
     const store = useDashboardStore()
     await store.fetchAll()
     expect(store.loading).toBe(false)
-  })
-
-  /* ── fetchAll with topOrganisms success → hasIsolateData ─────── */
-
-  it('sets hasIsolateData true when topOrganisms returns organisms', async () => {
-    api.topOrganisms.mockResolvedValue({
-      organisms: [
-        { name: 'Escherichia coli', arCode: 'ESBL', detectionCount: 1547, siteCount: 14, yoyTrend: 'up', resistanceRate: 38.7 },
-      ],
-    })
-
-    const store = useDashboardStore()
-    await store.fetchAll()
-    expect(store.hasIsolateData).toBe(true)
   })
 
   it('maps topOrganisms API response into topOrganisms computed', async () => {

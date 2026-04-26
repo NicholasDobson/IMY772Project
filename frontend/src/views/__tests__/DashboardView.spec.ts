@@ -9,7 +9,6 @@ const mockStore = vi.hoisted(() => ({
   error: null as string | null,
   availableYears: [2024, 2025] as number[],
   selectedYear: 2025,
-  hasIsolateData: false,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   statCards: null as any,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -49,7 +48,6 @@ vi.mock('@/composables/useChartTheme', () => ({
 }))
 
 import DashboardView from '@/views/DashboardView.vue'
-import { STAT_CARDS, PROVINCES, TOP_ORGANISMS } from '@/data/dashboard'
 
 const router = createRouter({
   history: createMemoryHistory(),
@@ -70,8 +68,7 @@ async function mountDashboard() {
 describe('DashboardView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    // Reset to default mock state (no live data)
-    mockStore.hasIsolateData = false
+    // Reset to default mock state (no live data yet)
     mockStore.statCards = null
     mockStore.provinces = null
     mockStore.topOrganisms = null
@@ -97,9 +94,14 @@ describe('DashboardView', () => {
     expect(mockStore.fetchAll).toHaveBeenCalledOnce()
   })
 
-  it('renders 4 StatCard stubs', async () => {
+  it('renders 4 StatCard stubs when store.statCards has 4 items', async () => {
+    mockStore.statCards = [
+      { id: 'incident-rate',  label: 'L1', value: '63%', trendText: 'T1', trendIcon: null, valueClass: '', trendClass: 'trend-danger' },
+      { id: 'sample-count',   label: 'L2', value: '200', trendText: 'T2', trendIcon: null, valueClass: '', trendClass: 'trend-muted' },
+      { id: 'high-risk-sites',label: 'L3', value: '6',   trendText: 'T3', trendIcon: null, valueClass: '', trendClass: 'trend-muted' },
+      { id: 'monthly-cases',  label: 'L4', value: '45',  trendText: 'T4', trendIcon: null, valueClass: '', trendClass: 'trend-muted' },
+    ]
     const wrapper = await mountDashboard()
-    // shallowMount stubs StatCard as <stat-card-stub>
     const cards = wrapper.findAll('stat-card-stub')
     expect(cards).toHaveLength(4)
   })
@@ -136,25 +138,23 @@ describe('DashboardView', () => {
     expect(mockStore.selectYear).toHaveBeenCalledWith(2024)
   })
 
-  /* ── Mockdata fallback (hasIsolateData = false) ───────────────── */
+  /* ── No data state (store returns null) ──────────────────────── */
 
-  it('renders province rows from mockdata when hasIsolateData is false', async () => {
+  it('renders no province rows when store.provinces is null', async () => {
     const wrapper = await mountDashboard()
-    const provinceNames = wrapper.findAll('.province-name').map((n) => n.text())
-    expect(provinceNames).toContain('Gauteng')
-    expect(provinceNames).toContain('Western Cape')
+    const provinceRows = wrapper.findAll('.province-row')
+    expect(provinceRows).toHaveLength(0)
   })
 
-  it('passes STAT_CARDS label to first StatCard stub when hasIsolateData is false', async () => {
+  it('renders no StatCard stubs when store.statCards is null', async () => {
     const wrapper = await mountDashboard()
-    const firstCard = wrapper.findAll('stat-card-stub')[0]!
-    expect(firstCard.attributes('label')).toBe(STAT_CARDS[0]!.label)
+    const cards = wrapper.findAll('stat-card-stub')
+    expect(cards).toHaveLength(0)
   })
 
-  /* ── Live data override (hasIsolateData = true) ───────────────── */
+  /* ── Live data from store ────────────────────────────────────── */
 
-  it('passes live statCards data to StatCard stubs when hasIsolateData is true', async () => {
-    mockStore.hasIsolateData = true
+  it('passes live statCards data to StatCard stubs when store.statCards is populated', async () => {
     mockStore.statCards = [
       { id: 'incident-rate', label: 'LIVE Label', value: '99%', trendText: '+1%', trendIcon: null, valueClass: '', trendClass: 'trend-danger' },
       { id: 'sample-count',  label: 'L2', value: '200', trendText: 'T2', trendIcon: null, valueClass: '', trendClass: 'trend-muted' },
@@ -168,17 +168,8 @@ describe('DashboardView', () => {
     expect(firstCard.attributes('value')).toBe('99%')
   })
 
-  it('uses PROVINCES mockdata for province bars when hasIsolateData is false', async () => {
-    const wrapper = await mountDashboard()
-    const provinceRows = wrapper.findAll('.province-row')
-    expect(provinceRows).toHaveLength(PROVINCES.length)
-  })
-
-  it('shows live province data when hasIsolateData is true and store.provinces is populated', async () => {
-    mockStore.hasIsolateData = true
-    mockStore.provinces = [
-      { name: 'Limpopo', risk: 'LOW', percent: 20 },
-    ]
+  it('shows live province data when store.provinces is populated', async () => {
+    mockStore.provinces = [{ name: 'Limpopo', risk: 'LOW', percent: 20 }]
 
     const wrapper = await mountDashboard()
     const names = wrapper.findAll('.province-name').map((n) => n.text())
@@ -188,7 +179,6 @@ describe('DashboardView', () => {
   /* ── riskBadgeClass helper (via province badges) ─────────────── */
 
   it('assigns badge-high class to HIGH risk provinces', async () => {
-    mockStore.hasIsolateData = true
     mockStore.provinces = [{ name: 'Gauteng', risk: 'HIGH', percent: 88 }]
 
     const wrapper = await mountDashboard()
@@ -196,7 +186,6 @@ describe('DashboardView', () => {
   })
 
   it('assigns badge-med class to MED risk provinces', async () => {
-    mockStore.hasIsolateData = true
     mockStore.provinces = [{ name: 'Western Cape', risk: 'MED', percent: 48 }]
 
     const wrapper = await mountDashboard()
@@ -204,7 +193,6 @@ describe('DashboardView', () => {
   })
 
   it('assigns badge-low class to LOW risk provinces', async () => {
-    mockStore.hasIsolateData = true
     mockStore.provinces = [{ name: 'Free State', risk: 'LOW', percent: 15 }]
 
     const wrapper = await mountDashboard()
@@ -214,7 +202,6 @@ describe('DashboardView', () => {
   /* ── riskColor helper (via province bar fill inline style) ────── */
 
   it('sets HIGH risk bar fill to the high-risk CSS variable', async () => {
-    mockStore.hasIsolateData = true
     mockStore.provinces = [{ name: 'Gauteng', risk: 'HIGH', percent: 88 }]
 
     const wrapper = await mountDashboard()
@@ -223,7 +210,6 @@ describe('DashboardView', () => {
   })
 
   it('sets LOW risk bar fill to the low-risk CSS variable', async () => {
-    mockStore.hasIsolateData = true
     mockStore.provinces = [{ name: 'Free State', risk: 'LOW', percent: 15 }]
 
     const wrapper = await mountDashboard()

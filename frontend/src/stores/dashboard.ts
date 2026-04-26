@@ -239,21 +239,12 @@ export const useDashboardStore = defineStore('dashboard', () => {
     loading.value = false
   }
 
-  /* ── Computed: does the DB have isolate data? ────────────────── */
-  // True once top-organisms returns at least one organism.
-  // When false (e.g. only Epicollect was uploaded), callers should
-  // prefer the static mockdata fallback over live zeros.
-  const hasIsolateData = computed<boolean>(() =>
-    (_topOrganisms.value?.organisms?.length ?? 0) > 0
-  )
-
   return {
     loading,
     trendLoading,
     error,
     availableYears,
     selectedYear,
-    hasIsolateData,
     statCards,
     provinces,
     topOrganisms,

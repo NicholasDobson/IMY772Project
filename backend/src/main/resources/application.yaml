@@ -7,7 +7,7 @@ spring:
     username: postgres
     password: postgres
     driver-class-name: org.postgresql.Driver
-  
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,3 +16,16 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
     show-sql: true
+
+# ── AI Advisor (Groq) ───────────────────────────────────────────────
+# Get a free key at https://console.groq.com/keys
+# Set via env var GROQ_API_KEY in backend/.env (do not commit real keys).
+groq:
+  api-key: ${GROQ_API_KEY:}
+  model: llama-3.3-70b-versatile
+
+# ── AWS Cognito ─────────────────────────────────────────────────────────────
+cognito:
+  user-pool-id: ${COGNITO_USER_POOL_ID:eu-north-1_y8MZlz9Vl}
+  region: ${COGNITO_REGION:eu-north-1}
+  admin-group: Admins
