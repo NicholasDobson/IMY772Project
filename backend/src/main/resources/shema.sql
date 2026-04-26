@@ -60,3 +60,12 @@ CREATE TABLE wgs_metrics (
     n50_value INTEGER,
     predicted_sir_profile VARCHAR(100)
 );
+
+CREATE TABLE blogs (
+    blog_id Long PRIMARY KEY DEFAULT,
+    title VARCHAR(255),
+    image VARCHAR(255),
+    author VARCHAR(255),
+    content TEXT,
+    date_published TIMESTAMP WITHOUT TIME ZONE
+);

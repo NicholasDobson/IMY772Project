@@ -10,48 +10,19 @@ import Tag from 'primevue/tag'
 import StatCard from '@/components/amr/StatCard.vue'
 import { useChartTheme } from '@/composables/useChartTheme'
 import { useDashboardStore } from '@/stores/dashboard'
-import {
-  STAT_CARDS,
-  MONTHS,
-  MONTHLY_NORMAL,
-  MONTHLY_ALERT,
-  PROVINCES,
-  RESISTANCE_GENES,
-  RIVER_SITES,
-  TOP_ORGANISMS,
-} from '@/data/dashboard'
 import type { RiskLevel } from '@/types/amr'
 
-/* ── Store — live data, falls back to mock when API is unavailable */
+/* ── Store — live database data ──────────────────────── */
 const store = useDashboardStore()
 
-// When the DB has no isolate data (e.g. only Epicollect was uploaded),
-// all resistance-related panels show the static mockdata-derived values
-// instead of misleading zeros returned by the live API.
-const displayStatCards = computed(() =>
-  store.statCards && store.hasIsolateData ? store.statCards : STAT_CARDS
-)
-const displayProvinces = computed(() =>
-  store.hasIsolateData ? (store.provinces ?? PROVINCES) : PROVINCES
-)
-const displayOrganisms = computed(() =>
-  store.hasIsolateData ? (store.topOrganisms ?? TOP_ORGANISMS) : TOP_ORGANISMS
-)
-const displayResistanceGenes = computed(() =>
-  store.hasIsolateData ? (store.resistanceGenes ?? RESISTANCE_GENES) : RESISTANCE_GENES
-)
-const displayRiverSites = computed(() =>
-  store.hasIsolateData ? (store.affectedRiverSites ?? RIVER_SITES) : RIVER_SITES
-)
-const displayMonths = computed(() =>
-  store.hasIsolateData && store.months.length ? store.months : MONTHS
-)
-const displayNormal = computed(() =>
-  store.hasIsolateData && store.monthlyNormal.length ? store.monthlyNormal : MONTHLY_NORMAL
-)
-const displayAlert = computed(() =>
-  store.hasIsolateData && store.monthlyAlert.length ? store.monthlyAlert : MONTHLY_ALERT
-)
+const displayStatCards = computed(() => store.statCards ?? [])
+const displayProvinces = computed(() => store.provinces ?? [])
+const displayOrganisms = computed(() => store.topOrganisms ?? [])
+const displayResistanceGenes = computed(() => store.resistanceGenes ?? [])
+const displayRiverSites = computed(() => store.affectedRiverSites ?? [])
+const displayMonths = computed(() => store.months)
+const displayNormal = computed(() => store.monthlyNormal)
+const displayAlert = computed(() => store.monthlyAlert)
 
 /* ── State ───────────────────────────────────────────────────── */
 const router = useRouter()

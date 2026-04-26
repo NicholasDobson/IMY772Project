@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -27,12 +28,20 @@ const router = createRouter({
     {
       path: '/education',
       name: 'education',
-      component: () => import('../views/EducationView.vue'),
+      alias: '/blog',
+      component: () => import('../views/BlogView.vue'),
     },
     {
       path: '/upload',
       name: 'upload',
       component: () => import('../views/DataUploadView.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
+      path: '/admin/users',
+      name: 'user-management',
+      component: () => import('../views/UserManagementView.vue'),
+      meta: { requiresAdmin: true },
     },
     {
       path: '/settings',
@@ -40,11 +49,25 @@ const router = createRouter({
       component: () => import('../views/SettingsView.vue'),
     },
     {
+      path: '/blog/create',
+      name: 'create-blog',
+      component: () => import('../views/CreateBlogView.vue'),
+    },
+    {
       path: '/bacteria/:name',
       name: 'bacteria-detail',
       component: () => import('../views/BacteriaDetailView.vue'),
     },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.meta.requiresAdmin) {
+    const auth = useAuthStore()
+    if (!auth.isAdmin) {
+      return { name: 'dashboard' }
+    }
+  }
 })
 
 export default router

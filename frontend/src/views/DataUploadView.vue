@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref } from 'vue'
+import { reactive, ref, computed } from 'vue'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1'
 
@@ -7,69 +7,79 @@ type EtlFileType = 'EPICOLLECT' | 'BINARY_INFO' | 'AMR_FINDER' | 'STAR_AMR'
 
 const categories: {
   fileType: EtlFileType
+  formKey: string
   title: string
   description: string
   icon: string
 }[] = [
   {
     fileType: 'EPICOLLECT',
+    formKey: 'epicollect',
     title: 'Epicollect (Field Data)',
     description: 'Field collection exports from Epicollect5.',
     icon: 'pi pi-table',
   },
   {
     fileType: 'BINARY_INFO',
+    formKey: 'binaryInfo',
     title: 'Binary Info (Isolates)',
     description: 'Isolate and binary characterisation spreadsheets.',
     icon: 'pi pi-database',
   },
   {
     fileType: 'AMR_FINDER',
+    formKey: 'amrFinder',
     title: 'AMR Finder (Gene Sequences)',
     description: 'Resistance gene detection outputs for sequences.',
     icon: 'pi pi-sitemap',
   },
   {
     fileType: 'STAR_AMR',
+    formKey: 'starAmr',
     title: 'Star AMR (WGS Metrics)',
     description: 'Whole-genome sequencing AMR metrics and summaries.',
     icon: 'pi pi-chart-bar',
   },
 ]
 
-type SlotStatus = 'idle' | 'uploading' | 'success' | 'error'
-
 interface SlotState {
   file: File | null
-  status: SlotStatus
-  message: string
+  error: string
 }
 
 function initialSlots(): Record<EtlFileType, SlotState> {
   return {
-    EPICOLLECT: { file: null, status: 'idle', message: '' },
-    BINARY_INFO: { file: null, status: 'idle', message: '' },
-    AMR_FINDER: { file: null, status: 'idle', message: '' },
-    STAR_AMR: { file: null, status: 'idle', message: '' },
+    EPICOLLECT: { file: null, error: '' },
+    BINARY_INFO: { file: null, error: '' },
+    AMR_FINDER: { file: null, error: '' },
+    STAR_AMR: { file: null, error: '' },
   }
 }
 
 const slots = reactive<Record<EtlFileType, SlotState>>(initialSlots())
 
-const xlsxAccept = '.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+// Support for multiple formats
+const acceptedFormats = '.xlsx, .csv, .tsv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, text/csv, text/tab-separated-values'
+const validExtensions = ['.xlsx', '.csv', '.tsv']
 
-function isXlsx(file: File): boolean {
+// Global Batch State
+const batchStatus = ref<'idle' | 'uploading' | 'success' | 'error'>('idle')
+const globalMessage = ref('')
+const globalWarnings = ref<string[]>([])
+
+const hasStagedFiles = computed(() => Object.values(slots).some(slot => slot.file !== null))
+
+function isValidFormat(file: File): boolean {
   const n = file.name.toLowerCase()
-  return n.endsWith('.xlsx')
+  return validExtensions.some(ext => n.endsWith(ext))
 }
 
 function assignFile(fileType: EtlFileType, file: File | null, clearInputId?: string): void {
   if (!file) return
 
-  if (!isXlsx(file)) {
+  if (!isValidFormat(file)) {
     slots[fileType].file = null
-    slots[fileType].status = 'error'
-    slots[fileType].message = 'Only .xlsx workbooks are accepted.'
+    slots[fileType].error = 'Invalid format. Use .xlsx, .csv, or .tsv'
     if (clearInputId) {
       const el = document.getElementById(clearInputId) as HTMLInputElement | null
       if (el) el.value = ''
@@ -78,64 +88,76 @@ function assignFile(fileType: EtlFileType, file: File | null, clearInputId?: str
   }
 
   slots[fileType].file = file
-  slots[fileType].status = 'idle'
-  slots[fileType].message = ''
+  slots[fileType].error = ''
+  // Reset global states if user modifies selection
+  batchStatus.value = 'idle'
+  globalMessage.value = ''
+  globalWarnings.value = []
 }
 
 function onFileSelected(fileType: EtlFileType, ev: Event): void {
   const input = ev.target as HTMLInputElement
   const file = input.files?.[0] ?? null
-  if (!file) return
   assignFile(fileType, file, `file-${fileType}`)
 }
 
 function onDropFile(fileType: EtlFileType, ev: DragEvent): void {
   const file = ev.dataTransfer?.files?.[0] ?? null
-  if (!file) return
   assignFile(fileType, file, `file-${fileType}`)
 }
 
 function clearSlot(fileType: EtlFileType): void {
   slots[fileType].file = null
-  slots[fileType].status = 'idle'
-  slots[fileType].message = ''
+  slots[fileType].error = ''
   const el = document.getElementById(`file-${fileType}`) as HTMLInputElement | null
   if (el) el.value = ''
 }
 
-async function uploadSlot(fileType: EtlFileType): Promise<void> {
-  const slot = slots[fileType]
-  if (!slot.file) return
+function clearAllSlots(): void {
+  Object.keys(slots).forEach((key) => clearSlot(key as EtlFileType))
+  batchStatus.value = 'idle'
+  globalMessage.value = ''
+  globalWarnings.value = []
+}
 
-  slot.status = 'uploading'
-  slot.message = ''
+async function uploadBatch(): Promise<void> {
+  if (!hasStagedFiles.value) return
+
+  batchStatus.value = 'uploading'
+  globalMessage.value = ''
+  globalWarnings.value = []
 
   const formData = new FormData()
-  formData.append('file', slot.file)
-  formData.append('fileType', fileType)
+  
+  // Map our slotted files to the exact param names expected by the Spring Boot controller
+  categories.forEach(cat => {
+    const file = slots[cat.fileType].file
+    if (file) formData.append(cat.formKey, file)
+  })
 
   try {
-    const res = await fetch(`${API_BASE}/etl/upload`, {
+    const res = await fetch(`${API_BASE}/etl/upload-batch`, {
       method: 'POST',
       body: formData,
     })
-    const text = await res.text()
+
     if (res.ok) {
-      slot.status = 'success'
-      slot.message = text || 'Upload completed.'
-      slot.file = null
-      const el = document.getElementById(`file-${fileType}`) as HTMLInputElement | null
-      if (el) el.value = ''
+      const data = await res.json()
+      batchStatus.value = 'success'
+      globalMessage.value = data.message || 'Batch uploaded successfully.'
+      globalWarnings.value = data.warnings || []
+      
+      // Clear out the files so the user knows it's done
+      Object.keys(slots).forEach((key) => clearSlot(key as EtlFileType))
     } else {
-      slot.status = 'error'
-      slot.message = text || `Request failed (${res.status}).`
+      // Backend returns plain text for 400/500 errors
+      const errorText = await res.text()
+      batchStatus.value = 'error'
+      globalMessage.value = errorText || `Upload failed with status: ${res.status}`
     }
   } catch (e) {
-    slot.status = 'error'
-    slot.message =
-      e instanceof Error
-        ? e.message
-        : 'Network error. Check that the API is running and CORS is configured.'
+    batchStatus.value = 'error'
+    globalMessage.value = e instanceof Error ? e.message : 'Network error. Ensure the backend is running.'
   }
 }
 
@@ -150,15 +172,14 @@ setTimeout(() => {
     <div class="page-header">
       <h1 class="page-title">Data upload</h1>
       <p class="page-lead">
-        Import Excel workbooks into the ETL pipeline. Each data source has its own slot so files are
-        labelled correctly on the server.
+        Import datasets into the ETL pipeline. You can upload files individually or queue multiple files for a single, synchronized import.
       </p>
     </div>
 
     <section class="upload-section">
       <div class="section-header">
-        <h2 class="section-title">Excel workbooks</h2>
-        <p class="section-desc">Only <strong>.xlsx</strong> files are accepted for now.</p>
+        <h2 class="section-title">Data Sources</h2>
+        <p class="section-desc">Accepted formats: <strong>.xlsx, .csv, .tsv</strong>.</p>
       </div>
 
       <div class="upload-grid">
@@ -167,9 +188,9 @@ setTimeout(() => {
           :key="cat.fileType"
           class="upload-card"
           :class="{
-            'upload-card--busy': slots[cat.fileType].status === 'uploading',
-            'upload-card--ok': slots[cat.fileType].status === 'success',
-            'upload-card--err': slots[cat.fileType].status === 'error',
+            'upload-card--staged': slots[cat.fileType].file,
+            'upload-card--err': slots[cat.fileType].error,
+            'upload-card--disabled': batchStatus === 'uploading'
           }"
         >
           <div class="card-head">
@@ -192,56 +213,69 @@ setTimeout(() => {
               :id="`file-${cat.fileType}`"
               type="file"
               class="sr-only"
-              :accept="xlsxAccept"
-              :disabled="slots[cat.fileType].status === 'uploading'"
+              :accept="acceptedFormats"
+              :disabled="batchStatus === 'uploading'"
               @change="onFileSelected(cat.fileType, $event)"
             />
             <i class="pi pi-cloud-upload drop-icon"></i>
             <span class="drop-text">
-              <span class="drop-primary">Choose .xlsx file</span>
-              <span class="drop-muted">or drop here (browser permitting)</span>
+              <span class="drop-primary">Choose a file</span>
+              <span class="drop-muted">or drop here</span>
             </span>
           </label>
 
           <div v-if="slots[cat.fileType].file" class="file-row">
-            <span class="file-name" :title="slots[cat.fileType].file!.name">{{
-              slots[cat.fileType].file!.name
-            }}</span>
-            <div class="file-actions">
-              <button
-                type="button"
-                class="btn btn--ghost"
-                :disabled="slots[cat.fileType].status === 'uploading'"
-                @click="clearSlot(cat.fileType)"
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                class="btn btn--primary"
-                :disabled="slots[cat.fileType].status === 'uploading'"
-                @click="uploadSlot(cat.fileType)"
-              >
-                <span v-if="slots[cat.fileType].status !== 'uploading'">Upload</span>
-                <span v-else class="uploading-label"
-                  ><i class="pi pi-spin pi-spinner"></i> Uploading…</span
-                >
-              </button>
-            </div>
+            <span class="file-name" :title="slots[cat.fileType].file!.name">
+              <i class="pi pi-file"></i> {{ slots[cat.fileType].file!.name }}
+            </span>
+            <button
+              type="button"
+              class="btn btn--ghost btn--small"
+              :disabled="batchStatus === 'uploading'"
+              @click="clearSlot(cat.fileType)"
+            >
+              Clear
+            </button>
           </div>
 
-          <p v-if="slots[cat.fileType].message" class="status-msg" role="status">
-            <i
-              v-if="slots[cat.fileType].status === 'success'"
-              class="pi pi-check-circle status-icon status-icon--ok"
-            ></i>
-            <i
-              v-else-if="slots[cat.fileType].status === 'error'"
-              class="pi pi-times-circle status-icon status-icon--err"
-            ></i>
-            {{ slots[cat.fileType].message }}
+          <p v-if="slots[cat.fileType].error" class="status-msg error-text">
+            <i class="pi pi-exclamation-circle status-icon"></i>
+            {{ slots[cat.fileType].error }}
           </p>
         </article>
+      </div>
+    </section>
+
+    <section class="batch-actions-section">
+      <div class="batch-buttons">
+        <button 
+          class="btn btn--ghost" 
+          @click="clearAllSlots" 
+          :disabled="!hasStagedFiles || batchStatus === 'uploading'">
+          Clear All
+        </button>
+        <button 
+          class="btn btn--primary btn--large" 
+          @click="uploadBatch" 
+          :disabled="!hasStagedFiles || batchStatus === 'uploading'">
+          <span v-if="batchStatus === 'uploading'"><i class="pi pi-spin pi-spinner"></i> Uploading Batch...</span>
+          <span v-else><i class="pi pi-upload"></i> Upload Selected Files</span>
+        </button>
+      </div>
+
+      <div v-if="globalMessage" class="global-alert" :class="`alert--${batchStatus}`">
+        <div class="alert-header">
+          <i v-if="batchStatus === 'success'" class="pi pi-check-circle"></i>
+          <i v-else-if="batchStatus === 'error'" class="pi pi-times-circle"></i>
+          <strong>{{ globalMessage }}</strong>
+        </div>
+        
+        <div v-if="globalWarnings.length > 0" class="warnings-list">
+          <p class="warnings-title">Warnings generated during import:</p>
+          <ul>
+            <li v-for="(warn, idx) in globalWarnings" :key="idx">{{ warn }}</li>
+          </ul>
+        </div>
       </div>
     </section>
   </div>
@@ -345,15 +379,18 @@ setTimeout(() => {
   gap: 14px;
   transition:
     border-color 0.18s,
-    box-shadow 0.18s;
+    box-shadow 0.18s,
+    opacity 0.2s;
 }
 
-.upload-card--busy {
-  border-color: color-mix(in srgb, var(--c-brand) 35%, var(--c-border));
+.upload-card--staged {
+  border-color: color-mix(in srgb, var(--c-brand) 45%, var(--c-border));
+  background: color-mix(in srgb, var(--c-brand) 3%, var(--c-bg));
 }
 
-.upload-card--ok {
-  border-color: color-mix(in srgb, var(--c-green) 45%, var(--c-border));
+.upload-card--disabled {
+  opacity: 0.6;
+  pointer-events: none;
 }
 
 .upload-card--err {
@@ -449,36 +486,48 @@ setTimeout(() => {
 
 .file-row {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--c-bg);
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
 }
 
 .file-name {
   font-size: 12px;
-  color: var(--c-text-muted);
+  font-weight: 500;
+  color: var(--c-brand);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.file-actions {
   display: flex;
-  gap: 8px;
-  justify-content: flex-end;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn {
   font-family: 'DM Sans', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
-  padding: 7px 14px;
+  padding: 8px 16px;
   border-radius: 6px;
   border: 1px solid transparent;
   cursor: pointer;
-  transition:
-    background 0.12s,
-    border-color 0.12s,
-    color 0.12s;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn--small {
+  font-size: 11px;
+  padding: 4px 10px;
+}
+
+.btn--large {
+  font-size: 14px;
+  padding: 10px 24px;
 }
 
 .btn:disabled {
@@ -493,7 +542,7 @@ setTimeout(() => {
 }
 
 .btn--primary:hover:not(:disabled) {
-  filter: brightness(1.06);
+  filter: brightness(1.08);
 }
 
 .btn--ghost {
@@ -508,34 +557,75 @@ setTimeout(() => {
   border-color: var(--c-border-strong);
 }
 
-.uploading-label {
-  display: inline-flex;
+.batch-actions-section {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  border-top: 1px solid var(--c-border);
+  padding-top: 24px;
+}
+
+.batch-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.global-alert {
+  padding: 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  border: 1px solid transparent;
+}
+
+.alert--success {
+  background: color-mix(in srgb, var(--c-green) 10%, transparent);
+  border-color: color-mix(in srgb, var(--c-green) 30%, transparent);
+  color: color-mix(in srgb, var(--c-green) 80%, black);
+}
+
+.alert--error {
+  background: color-mix(in srgb, var(--c-red) 10%, transparent);
+  border-color: color-mix(in srgb, var(--c-red) 30%, transparent);
+  color: color-mix(in srgb, var(--c-red) 80%, black);
+}
+
+.alert-header {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.warnings-list {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed currentColor;
+}
+
+.warnings-title {
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.warnings-list ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 12.5px;
+  opacity: 0.9;
 }
 
 .status-msg {
   font-size: 11.5px;
   line-height: 1.45;
-  color: var(--c-text-muted);
   margin: 0;
-  padding-top: 2px;
   display: flex;
   align-items: flex-start;
   gap: 6px;
 }
 
-.status-icon {
-  font-size: 13px;
-  margin-top: 1px;
-  flex-shrink: 0;
-}
-
-.status-icon--ok {
-  color: var(--c-green);
-}
-
-.status-icon--err {
+.error-text {
   color: var(--c-red);
 }
 </style>

@@ -28,7 +28,20 @@
 	</scm>
 	<properties>
 		<java.version>21</java.version>
+		<aws.sdk.version>2.25.0</aws.sdk.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<dependency>
+				<groupId>software.amazon.awssdk</groupId>
+				<artifactId>bom</artifactId>
+				<version>${aws.sdk.version}</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -74,6 +87,15 @@
     		<artifactId>jackson-databind</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>software.amazon.awssdk</groupId>
+			<artifactId>cognitoidentityprovider</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.github.cdimascio</groupId>
+			<artifactId>dotenv-java</artifactId>
+			<version>3.0.0</version>
+		</dependency>
+		<dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>junit-jupiter</artifactId>
             <version>1.19.7</version>
@@ -89,6 +111,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-testcontainers</artifactId>
             <scope>test</scope>
+        </dependency>
+		<dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-csv</artifactId>
+            <version>1.10.0</version>
         </dependency>
 	</dependencies>
 
