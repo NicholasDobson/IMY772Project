@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import DashboardView from '../views/DashboardView.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -33,6 +34,7 @@ const router = createRouter({
       path: '/upload',
       name: 'upload',
       component: () => import('../views/DataUploadView.vue'),
+      meta: { requiresAdmin: true },
     },
     {
       path: '/settings',
@@ -45,6 +47,15 @@ const router = createRouter({
       component: () => import('../views/BacteriaDetailView.vue'),
     },
   ],
+})
+
+router.beforeEach((to) => {
+  if (to.meta.requiresAdmin) {
+    const auth = useAuthStore()
+    if (!auth.isAdmin) {
+      return { name: 'dashboard' }
+    }
+  }
 })
 
 export default router

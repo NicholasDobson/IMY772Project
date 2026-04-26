@@ -1,16 +1,23 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import upLogo from '@/assets/up-logo.png'
+import { useAuthStore } from '@/stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 
-const navItems = [
+const baseNavItems = [
   { name: 'Dashboard', path: '/', icon: 'pi-objects-column' },
   { name: 'Map', path: '/map', icon: 'pi-map' },
   { name: 'River detail', path: '/river', icon: 'pi-chart-line' },
   { name: 'Education Blog', path: '/education', icon: 'pi-book' },
-  { name: 'Data Upload', path: '/upload', icon: 'pi-upload' },
+  { name: 'Data Upload', path: '/upload', icon: 'pi-upload', adminOnly: true },
 ]
+
+const navItems = computed(() =>
+  baseNavItems.filter((item) => !item.adminOnly || auth.isAdmin),
+)
 
 function isActive(path: string) {
   return path === '/' ? route.path === '/' : route.path.startsWith(path)
