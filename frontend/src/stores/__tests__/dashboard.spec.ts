@@ -166,6 +166,15 @@ describe('useDashboardStore', () => {
     expect(store.provinces![1]).toMatchObject({ name: 'Western Cape', risk: 'MED', percent: 48 })
   })
 
+  it('maps empty riskByProvince response to an empty provinces list', async () => {
+    api.riskByProvince.mockResolvedValue({ provinces: [] })
+
+    const store = useDashboardStore()
+    await store.fetchAll()
+
+    expect(store.provinces).toEqual([])
+  })
+
   /* ── resistanceGenes and affectedRiverSites ───────────────────── */
 
   it('maps topResistanceGenes into resistanceGenes computed', async () => {

@@ -100,16 +100,14 @@ class AnalyticsServiceTest {
     // ── getRiskByProvince ─────────────────────────────────────────────────────
 
     @Test
-    void shouldReturnSeedProvincesWhenNoData() {
+    void shouldReturnEmptyProvincesWhenNoData() {
         when(mockQuery.getResultList()).thenReturn(List.of());
 
         Map<String, Object> result = analyticsService.getRiskByProvince();
 
         @SuppressWarnings("unchecked")
         List<Map<String, Object>> provinces = (List<Map<String, Object>>) result.get("provinces");
-        assertFalse(provinces.isEmpty());
-        // Seed data always includes Gauteng
-        assertTrue(provinces.stream().anyMatch(p -> "Gauteng".equals(p.get("name"))));
+        assertTrue(provinces.isEmpty());
     }
 
     @Test

@@ -383,9 +383,8 @@ public class AnalyticsService {
             byProvince.get(province)[1] += mdro;
         }
 
-        // If no real data yet, return seed province list so UI never goes blank
         if (byProvince.isEmpty()) {
-            return seedProvinceResponse();
+            return Map.of("provinces", List.of());
         }
 
         // Determine max MDRO count for normalising the 0-100 riskScore bar
@@ -422,19 +421,6 @@ public class AnalyticsService {
 
     private int riskOrder(String level) {
         return switch (level) { case "HIGH" -> 0; case "MED" -> 1; default -> 2; };
-    }
-
-    private Map<String, Object> seedProvinceResponse() {
-        List<Map<String, Object>> list = List.of(
-            Map.of("name","Gauteng",       "riskLevel","HIGH","riskScore",85,"mdroCount",0),
-            Map.of("name","KwaZulu-Natal", "riskLevel","HIGH","riskScore",78,"mdroCount",0),
-            Map.of("name","Western Cape",  "riskLevel","MED", "riskScore",52,"mdroCount",0),
-            Map.of("name","Eastern Cape",  "riskLevel","MED", "riskScore",45,"mdroCount",0),
-            Map.of("name","Limpopo",       "riskLevel","MED", "riskScore",38,"mdroCount",0),
-            Map.of("name","Mpumalanga",    "riskLevel","LOW", "riskScore",22,"mdroCount",0),
-            Map.of("name","Free State",    "riskLevel","LOW", "riskScore",18,"mdroCount",0)
-        );
-        return Map.of("provinces", list);
     }
 
     // ── 8. Top Resistance Genes ────────────────────────────────────────────────
