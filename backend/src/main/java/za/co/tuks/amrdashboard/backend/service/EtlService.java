@@ -2,6 +2,9 @@ package za.co.tuks.amrdashboard.backend.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.stereotype.Service;
@@ -10,14 +13,13 @@ import org.springframework.web.multipart.MultipartFile;
 import za.co.tuks.amrdashboard.backend.model.*;
 import za.co.tuks.amrdashboard.backend.repository.*;
 
+import java.io.BufferedReader;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -30,218 +32,246 @@ public class EtlService {
     private final AmrSequenceRepository amrSequenceRepository;
     private final WgsMetricsRepository wgsMetricsRepository;
 
-    // TODO: SPRINT 2 - Remove this mock map and replace with actual AWS Cognito / User Database lookup
     private final Map<String, java.util.UUID> mockUserDatabase = Map.of(
             "jane.doe@tuks.co.za", java.util.UUID.fromString("550e8400-e29b-41d4-a716-446655440000"),
             "john.smith@tuks.co.za", java.util.UUID.fromString("6ba7b810-9dad-11d1-80b4-00c04fd430c8")
     );
 
-    @Transactional
-    public void processExcelFile(MultipartFile file, FileType fileType) throws Exception {
-        log.info("Starting ETL process for file type: {}", fileType);
-        
-        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
-            Sheet sheet = workbook.getSheetAt(0); // Assuming data is always on the first sheet
+    // If any exception happens inside this method, Spring reverts ALL database inserts
+    @Transactional(rollbackFor = Exception.class)
+    public List<String> processBatch(MultipartFile epicollect, MultipartFile binaryInfo, MultipartFile amrFinder, MultipartFile starAmr) throws Exception {
+        List<String> warnings = new ArrayList<>();
 
-            // Skip the header row (row 0)
+        if (epicollect != null) warnings.addAll(parseEpicollect(extractData(epicollect)));
+        if (binaryInfo != null) warnings.addAll(parseBinaryInfo(extractData(binaryInfo)));
+        if (amrFinder != null) warnings.addAll(parseAmrFinder(extractData(amrFinder)));
+        if (starAmr != null) warnings.addAll(parseStarAmr(extractData(starAmr)));
+
+        return warnings;
+    }
+
+    // --- Core Extraction Engine (Supports XLSX, CSV, TSV) ---
+
+    private List<Map<String, String>> extractData(MultipartFile file) throws Exception {
+        String filename = file.getOriginalFilename() != null ? file.getOriginalFilename().toLowerCase() : "";
+        
+        if (filename.endsWith(".csv") || filename.endsWith(".tsv")) {
+            return extractDelimitedData(file, filename.endsWith(".tsv") ? '\t' : ',');
+        } else if (filename.endsWith(".xlsx")) {
+            return extractExcelData(file);
+        } else {
+            throw new IllegalArgumentException("Unsupported file format: " + filename + ". Please upload .xlsx, .csv, or .tsv");
+        }
+    }
+
+    private List<Map<String, String>> extractDelimitedData(MultipartFile file, char delimiter) throws Exception {
+        List<Map<String, String>> records = new ArrayList<>();
+        CSVFormat format = CSVFormat.DEFAULT.builder().setDelimiter(delimiter).setHeader().setSkipHeaderRecord(true).build();
+        
+        try (BufferedReader fileReader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8));
+             CSVParser csvParser = new CSVParser(fileReader, format)) {
+            
+            for (CSVRecord csvRecord : csvParser) {
+                Map<String, String> row = new HashMap<>();
+                csvParser.getHeaderNames().forEach(header -> row.put(header.trim(), csvRecord.get(header).trim()));
+                records.add(row);
+            }
+        }
+        return records;
+    }
+
+    private List<Map<String, String>> extractExcelData(MultipartFile file) throws Exception {
+        List<Map<String, String>> records = new ArrayList<>();
+        try (InputStream is = file.getInputStream(); Workbook workbook = new XSSFWorkbook(is)) {
+            Sheet sheet = workbook.getSheetAt(0);
+            Row headerRow = sheet.getRow(0);
+            if (headerRow == null) throw new IllegalArgumentException("Excel file is missing a header row.");
+
+            List<String> headers = new ArrayList<>();
+            for (Cell cell : headerRow) {
+                headers.add(getCellValueAsString(cell).trim());
+            }
+
             for (int i = 1; i <= sheet.getLastRowNum(); i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
 
+                Map<String, String> record = new HashMap<>();
+                for (int j = 0; j < headers.size(); j++) {
+                    record.put(headers.get(j), getCellValueAsString(row.getCell(j)));
+                }
+                records.add(record);
+            }
+        }
+        return records;
+    }
+
+    // --- Domain Parsers (Using Headers) ---
+
+    private List<String> parseEpicollect(List<Map<String, String>> data) {
+        List<String> warnings = new ArrayList<>();
+        for (Map<String, String> row : data) {
+            String siteId = row.get("Site ID");
+            if (siteId == null || siteId.isBlank()) {
+                throw new IllegalArgumentException("Epicollect Upload Failed: Critical column 'Site ID' is missing or empty.");
+            }
+
+            Site site = siteRepository.findById(siteId).orElse(new Site());
+            site.setSiteId(siteId);
+            site.setLocationName(row.get("Location Name"));
+            site.setRiverName(row.get("River Name"));
+            site.setLatitude(parseDouble(row.get("Lat")));
+            site.setLongitude(parseDouble(row.get("Lng")));
+            siteRepository.save(site);
+
+            String sampleId = row.get("Sample ID");
+            if (sampleId == null || sampleId.isBlank()) continue;
+
+            WaterSample sample = waterSampleRepository.findById(sampleId).orElse(new WaterSample());
+            sample.setSampleId(sampleId);
+            sample.setSite(site);
+            sample.setSampleName(row.get("Sample Name"));
+            sample.setSampleAnalysisType(row.get("Analysis Type"));
+            sample.setTripIdentifier(row.get("Trip ID"));
+
+            String dateStr = row.get("Date");
+            if (dateStr != null && !dateStr.isBlank()) {
                 try {
-                    switch (fileType) {
-                        case EPICOLLECT -> parseEpicollect(row);
-                        case BINARY_INFO -> parseBinaryInfo(row);
-                        case AMR_FINDER -> parseAmrFinder(row);
-                        case STAR_AMR -> parseStarAmr(row);
-                    }
+                    sample.setCollectionDate(LocalDate.parse(dateStr));
                 } catch (Exception e) {
-                    log.error("Error parsing row {}: {}", i, e.getMessage());
-                    // Continue processing other rows even if one fails
+                    warnings.add("Could not parse date '" + dateStr + "' for Sample ID " + sampleId);
                 }
-            }
-        }
-        log.info("Completed ETL process for file type: {}", fileType);
-    }
-
-    private void parseEpicollect(Row row) {
-        // Expected Columns: 
-        // 0: Site ID, 1: Location Name, 2: River Name, 3: Lat, 4: Lng
-        // 5: Sample ID, 6: Trip ID, 7: Date, 8: Temp, 9: pH, 10: TDS, 11: EC, 12: DO
-
-        String siteId = getCellValueAsString(row.getCell(0));
-        if (siteId.isBlank()) return;
-
-        Site site = siteRepository.findById(siteId).orElse(new Site());
-        site.setSiteId(siteId);
-        site.setLocationName(getCellValueAsString(row.getCell(1))); // Changed to geo_loc_name per video
-        site.setRiverName(getCellValueAsString(row.getCell(2)));
-        site.setLatitude(getCellValueAsDouble(row.getCell(3)));
-        site.setLongitude(getCellValueAsDouble(row.getCell(4)));
-        siteRepository.save(site);
-
-        String sampleId = getCellValueAsString(row.getCell(5));
-        if (sampleId.isBlank()) return;
-
-        WaterSample sample = waterSampleRepository.findById(sampleId).orElse(new WaterSample());
-        sample.setSampleId(sampleId);
-        sample.setSite(site);
-        sample.setSampleName(getCellValueAsString(row.getCell(6))); // NEW
-        sample.setSampleAnalysisType(getCellValueAsString(row.getCell(7))); // NEW
-        sample.setTripIdentifier(getCellValueAsString(row.getCell(8)));
-        
-        Cell dateCell = row.getCell(9);
-        if (dateCell != null) {
-            if (dateCell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(dateCell)) {
-                // Handle properly formatted Excel dates
-                sample.setCollectionDate(dateCell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
-            } else if (dateCell.getCellType() == CellType.STRING) {
-                // Handle dates entered as plain text (e.g., "2025-05-10")
-                try {
-                    sample.setCollectionDate(java.time.LocalDate.parse(dateCell.getStringCellValue().trim()));
-                } catch (java.time.format.DateTimeParseException e) {
-                    // If it fails to parse, either leave it null or log it - we leave as null for now.
-                    // log.warn("Invalid date format in text cell: {}", dateCell.getStringCellValue());
-                }
-            }
-        }
-        sample.setWaterTemperature(getCellValueAsDouble(row.getCell(10)));
-        sample.setPhLevel(getCellValueAsDouble(row.getCell(11)));
-        sample.setTds(getCellValueAsDouble(row.getCell(12)));
-        sample.setEc(getCellValueAsDouble(row.getCell(13)));
-        sample.setDissolvedOxygen(getCellValueAsDouble(row.getCell(14)));
-
-        // Parse the Email for collected_by_user_id (Column 15)
-        String collectorEmail = getCellValueAsString(row.getCell(15)).trim().toLowerCase();
-        if (!collectorEmail.isBlank()) {
-            java.util.UUID userId = mockUserDatabase.get(collectorEmail);
-            if (userId != null) {
-                sample.setCollectedByUserId(userId);
             } else {
-                // Future enhancement: Throw an exception or log "User email not found in system"
-                System.out.println("Warning: Collector email not found - " + collectorEmail);
+                warnings.add("Missing collection date for Sample ID " + sampleId);
             }
-        }
-        
-        waterSampleRepository.save(sample);
-    }
 
-    private void parseBinaryInfo(Row row) {
-        // Expected Columns:
-        // 0: Sample ID (Link to WaterSample), 1: Isolate ID, 2: Isolate Number
-        // 3: Organism, 4: Context, 5: AR Code, 6+: Binary Flags (Intl1, TEM, SHV, etc.)
+            sample.setWaterTemperature(parseDouble(row.get("Temp")));
+            sample.setPhLevel(parseDouble(row.get("pH")));
+            sample.setTds(parseDouble(row.get("TDS")));
+            sample.setEc(parseDouble(row.get("EC")));
+            sample.setDissolvedOxygen(parseDouble(row.get("DO")));
 
-        String sampleId = getCellValueAsString(row.getCell(0));
-        if (sampleId.isBlank()) return;
-
-        WaterSample sample = waterSampleRepository.findById(sampleId).orElseGet(() -> {
-            WaterSample stub = new WaterSample();
-            stub.setSampleId(sampleId);
-            return waterSampleRepository.save(stub); 
-        });
-
-        String isolateId = getCellValueAsString(row.getCell(1));
-        if (isolateId.isBlank()) return;
-
-        Isolate isolate = isolateRepository.findById(isolateId).orElse(new Isolate());
-        isolate.setIsolateId(isolateId);
-        isolate.setWaterSample(sample);
-        isolate.setIsolateNumber(getCellValueAsString(row.getCell(2)));
-        isolate.setOrganismIdentity(getCellValueAsString(row.getCell(3)));
-        isolate.setSourceContext(getCellValueAsString(row.getCell(4)));
-        isolate.setArCode(getCellValueAsString(row.getCell(5)));
-        isolate.setVirulenceGenes(getCellValueAsString(row.getCell(6))); // NEW
-
-        Map<String, Boolean> profile = new HashMap<>();
-        profile.put("Intl1", "1".equals(getCellValueAsString(row.getCell(7))));
-        profile.put("Intl2", "1".equals(getCellValueAsString(row.getCell(8))));
-        profile.put("Intl3", "1".equals(getCellValueAsString(row.getCell(9))));
-        profile.put("TEM", "1".equals(getCellValueAsString(row.getCell(10))));
-        profile.put("SHV", "1".equals(getCellValueAsString(row.getCell(11))));
-        isolate.setBinaryTypingProfile(profile);
-
-        // Parse the Email for owner_id (Column 12)
-        String ownerEmail = getCellValueAsString(row.getCell(12)).trim().toLowerCase();
-        if (!ownerEmail.isBlank()) {
-            java.util.UUID ownerId = mockUserDatabase.get(ownerEmail);
-            if (ownerId != null) {
-                isolate.setOwnerId(ownerId);
-            } else {
-                System.out.println("Warning: Owner email not found - " + ownerEmail);
+            String email = row.getOrDefault("Collector Email", "").trim().toLowerCase();
+            if (!email.isBlank()) {
+                java.util.UUID userId = mockUserDatabase.get(email);
+                if (userId != null) sample.setCollectedByUserId(userId);
+                else warnings.add("Collector email not found in system: " + email);
             }
+
+            waterSampleRepository.save(sample);
         }
-        
-        isolateRepository.save(isolate);
+        return warnings;
     }
 
-    private void parseAmrFinder(Row row) {
-        // Expected Columns:
-        // 0: Isolate ID (Link to Isolate), 1: Gene Symbol, 2: Element Type
-        // 3: Resistance Class, 4: Resistance Subclass, 5: Identity %, 6: Coverage %
+    private List<String> parseBinaryInfo(List<Map<String, String>> data) {
+        List<String> warnings = new ArrayList<>();
+        for (Map<String, String> row : data) {
+            String isolateId = row.get("Isolate ID");
+            if (isolateId == null || isolateId.isBlank()) {
+                throw new IllegalArgumentException("Binary Info Upload Failed: 'Isolate ID' is missing.");
+            }
 
-        String isolateId = getCellValueAsString(row.getCell(0));
-        if (isolateId.isBlank()) return;
+            String sampleId = row.get("Sample ID");
+            WaterSample sample = null;
+            if (sampleId != null && !sampleId.isBlank()) {
+                sample = waterSampleRepository.findById(sampleId).orElseGet(() -> {
+                    WaterSample stub = new WaterSample();
+                    stub.setSampleId(sampleId);
+                    return waterSampleRepository.save(stub);
+                });
+            }
 
-        Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
-            Isolate stub = new Isolate();
-            stub.setIsolateId(isolateId);
-            return isolateRepository.save(stub);
-        });
+            Isolate isolate = isolateRepository.findById(isolateId).orElse(new Isolate());
+            isolate.setIsolateId(isolateId);
+            isolate.setWaterSample(sample);
+            isolate.setIsolateNumber(row.get("Isolate Number"));
+            isolate.setOrganismIdentity(row.get("Organism"));
+            isolate.setSourceContext(row.get("Context"));
+            isolate.setArCode(row.get("AR Code"));
+            isolate.setVirulenceGenes(row.get("Virulence Genes"));
 
-        AmrSequence seq = new AmrSequence();
-        seq.setIsolate(isolate); 
-        seq.setGeneSymbol(getCellValueAsString(row.getCell(1)));
-        seq.setSequenceName(getCellValueAsString(row.getCell(2))); // NEW
-        seq.setElementType(getCellValueAsString(row.getCell(3)));
-        seq.setResistanceClass(getCellValueAsString(row.getCell(4)));
-        seq.setResistanceSubclass(getCellValueAsString(row.getCell(5)));
-        
-        Double targetLen = getCellValueAsDouble(row.getCell(6)); // NEW
-        if (targetLen != null) seq.setTargetLength(targetLen.intValue());
-        
-        Double refLen = getCellValueAsDouble(row.getCell(7)); // NEW
-        if (refLen != null) seq.setReferenceSequenceLength(refLen.intValue());
+            Map<String, Boolean> profile = new HashMap<>();
+            // Safely check flags, defaulting to false if column is missing
+            profile.put("Intl1", "1".equals(row.getOrDefault("Intl1", "0")));
+            profile.put("Intl2", "1".equals(row.getOrDefault("Intl2", "0")));
+            profile.put("Intl3", "1".equals(row.getOrDefault("Intl3", "0")));
+            profile.put("TEM", "1".equals(row.getOrDefault("TEM", "0")));
+            profile.put("SHV", "1".equals(row.getOrDefault("SHV", "0")));
+            isolate.setBinaryTypingProfile(profile);
 
-        seq.setIdentityPercentage(getCellValueAsDouble(row.getCell(8)));
-        seq.setCoveragePercentage(getCellValueAsDouble(row.getCell(9)));
-        
-        Double alignLen = getCellValueAsDouble(row.getCell(10)); // NEW
-        if (alignLen != null) seq.setAlignmentLength(alignLen.intValue());
-        
-        seq.setAccessionClosestSequence(getCellValueAsString(row.getCell(11))); // NEW
+            String email = row.getOrDefault("Owner Email", "").trim().toLowerCase();
+            if (!email.isBlank()) {
+                java.util.UUID userId = mockUserDatabase.get(email);
+                if (userId != null) isolate.setOwnerId(userId);
+                else warnings.add("Owner email not found in system: " + email);
+            }
 
-        amrSequenceRepository.save(seq);
+            isolateRepository.save(isolate);
+        }
+        return warnings;
     }
 
-    private void parseStarAmr(Row row) {
-        // Expected Columns:
-        // 0: Isolate ID, 1: Quality Status, 2: Genotype, 3: Predicted Phenotype
-        // 4: Plasmid, 5: Genome Length, 6: N50 Value
+    private List<String> parseAmrFinder(List<Map<String, String>> data) {
+        List<String> warnings = new ArrayList<>();
+        for (Map<String, String> row : data) {
+            String isolateId = row.get("Isolate ID");
+            if (isolateId == null || isolateId.isBlank()) {
+                throw new IllegalArgumentException("AMR Finder Upload Failed: 'Isolate ID' is missing.");
+            }
 
-        String isolateId = getCellValueAsString(row.getCell(0));
-        if (isolateId.isBlank()) return;
+            Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
+                Isolate stub = new Isolate();
+                stub.setIsolateId(isolateId);
+                return isolateRepository.save(stub);
+            });
 
-        Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
-            Isolate stub = new Isolate();
-            stub.setIsolateId(isolateId);
-            return isolateRepository.save(stub);
-        });
+            AmrSequence seq = new AmrSequence();
+            seq.setIsolate(isolate);
+            seq.setGeneSymbol(row.get("Gene Symbol"));
+            seq.setSequenceName(row.get("Sequence Name"));
+            seq.setElementType(row.get("Element Type"));
+            seq.setResistanceClass(row.get("Class"));
+            seq.setResistanceSubclass(row.get("Subclass"));
+            
+            seq.setTargetLength(parseInteger(row.get("Target Length")));
+            seq.setReferenceSequenceLength(parseInteger(row.get("Reference Length")));
+            seq.setIdentityPercentage(parseDouble(row.get("Identity %")));
+            seq.setCoveragePercentage(parseDouble(row.get("Coverage %")));
+            seq.setAlignmentLength(parseInteger(row.get("Alignment Length")));
+            seq.setAccessionClosestSequence(row.get("Accession"));
 
-        WgsMetrics metrics = wgsMetricsRepository.findByIsolate_IsolateId(isolateId).orElse(new WgsMetrics());
-        metrics.setIsolate(isolate);
-        metrics.setQualityStatus(getCellValueAsString(row.getCell(1)));
-        metrics.setGenotype(getCellValueAsString(row.getCell(2)));
-        metrics.setPredictedPhenotype(getCellValueAsString(row.getCell(3)));
-        metrics.setPredictedSirProfile(getCellValueAsString(row.getCell(4))); // NEW
-        metrics.setPlasmid(getCellValueAsString(row.getCell(5))); 
-        
-        Double genomeLength = getCellValueAsDouble(row.getCell(6));
-        if (genomeLength != null) metrics.setGenomeLength(genomeLength.intValue());
-        
-        Double n50Value = getCellValueAsDouble(row.getCell(7));
-        if (n50Value != null) metrics.setN50Value(n50Value.intValue());
+            amrSequenceRepository.save(seq);
+        }
+        return warnings;
+    }
 
-        wgsMetricsRepository.save(metrics);
+    private List<String> parseStarAmr(List<Map<String, String>> data) {
+        List<String> warnings = new ArrayList<>();
+        for (Map<String, String> row : data) {
+            String isolateId = row.get("Isolate ID");
+            if (isolateId == null || isolateId.isBlank()) {
+                throw new IllegalArgumentException("Star AMR Upload Failed: 'Isolate ID' is missing.");
+            }
+
+            Isolate isolate = isolateRepository.findById(isolateId).orElseGet(() -> {
+                Isolate stub = new Isolate();
+                stub.setIsolateId(isolateId);
+                return isolateRepository.save(stub);
+            });
+
+            WgsMetrics metrics = wgsMetricsRepository.findByIsolate_IsolateId(isolateId).orElse(new WgsMetrics());
+            metrics.setIsolate(isolate);
+            metrics.setQualityStatus(row.get("Quality Status"));
+            metrics.setGenotype(row.get("Genotype"));
+            metrics.setPredictedPhenotype(row.get("Predicted Phenotype"));
+            metrics.setPredictedSirProfile(row.get("SIR Profile"));
+            metrics.setPlasmid(row.get("Plasmid"));
+            metrics.setGenomeLength(parseInteger(row.get("Genome Length")));
+            metrics.setN50Value(parseInteger(row.get("N50 Value")));
+
+            wgsMetricsRepository.save(metrics);
+        }
+        return warnings;
     }
 
     // --- Utility Methods ---
@@ -251,7 +281,10 @@ public class EtlService {
         return switch (cell.getCellType()) {
             case STRING -> cell.getStringCellValue().trim();
             case NUMERIC -> {
-                // If it's a whole number, prevent "1.0" format
+                // Instantly format dates so downstream parsers get standard strings
+                if (DateUtil.isCellDateFormatted(cell)) {
+                    yield cell.getDateCellValue().toInstant().atZone(ZoneId.systemDefault()).toLocalDate().toString();
+                }
                 if (cell.getNumericCellValue() == Math.floor(cell.getNumericCellValue())) {
                     yield String.valueOf((long) cell.getNumericCellValue());
                 }
@@ -262,18 +295,13 @@ public class EtlService {
         };
     }
 
-    private Double getCellValueAsDouble(Cell cell) {
-        if (cell == null) return null;
-        if (cell.getCellType() == CellType.NUMERIC) {
-            return cell.getNumericCellValue();
-        }
-        if (cell.getCellType() == CellType.STRING) {
-            try {
-                return Double.parseDouble(cell.getStringCellValue().trim());
-            } catch (NumberFormatException e) {
-                return null;
-            }
-        }
-        return null;
+    private Double parseDouble(String val) {
+        if (val == null || val.isBlank()) return null;
+        try { return Double.parseDouble(val); } catch (NumberFormatException e) { return null; }
+    }
+
+    private Integer parseInteger(String val) {
+        if (val == null || val.isBlank()) return null;
+        try { return (int) Double.parseDouble(val); } catch (NumberFormatException e) { return null; }
     }
 }

@@ -5,9 +5,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
-import za.co.tuks.amrdashboard.backend.model.FileType;
 import za.co.tuks.amrdashboard.backend.service.EtlService;
+
 import java.util.Map;
+import java.util.List;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -17,22 +18,31 @@ public class EtlController {
 
     private final EtlService etlService;
 
-    @PostMapping("/upload")
-    public ResponseEntity<String> uploadExcelFile(
-            @RequestParam("file") MultipartFile file,
-            @RequestParam("fileType") FileType fileType) {
-        
-        if (file.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("File is empty.");
+    @PostMapping("/upload-batch")
+    public ResponseEntity<?> uploadBatch(
+            @RequestParam(value = "epicollect", required = false) MultipartFile epicollect,
+            @RequestParam(value = "binaryInfo", required = false) MultipartFile binaryInfo,
+            @RequestParam(value = "amrFinder", required = false) MultipartFile amrFinder,
+            @RequestParam(value = "starAmr", required = false) MultipartFile starAmr) {
+
+        if (epicollect == null && binaryInfo == null && amrFinder == null && starAmr == null) {
+            return ResponseEntity.badRequest().body("No files provided for upload.");
         }
 
         try {
-            etlService.processExcelFile(file, fileType);
-            return ResponseEntity.ok("File uploaded and processed successfully.");
+            // return list of warnings
+            List<String> warnings = etlService.processBatch(epicollect, binaryInfo, amrFinder, starAmr);
+            
+            return ResponseEntity.ok(Map.of(
+                    "message", "Batch processed successfully.",
+                    "warnings", warnings
+            ));
+        } catch (IllegalArgumentException e) {
+            // validation errors (like missing headers or wrong formats)
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Validation Error: " + e.getMessage());
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to process file: " + e.getMessage());
+            // system crash
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Critical Failure (Rolled back): " + e.getMessage());
         }
     }
-
 }

@@ -8,7 +8,13 @@ import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.web.servlet.MockMvc;
 import za.co.tuks.amrdashboard.backend.service.EtlService;
 
+import java.util.Collections;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(EtlController.class)
@@ -21,33 +27,44 @@ class EtlControllerTest {
     private EtlService etlService;
 
     @Test
-    void shouldAcceptExcelUpload() throws Exception {
-        // Arrange
-        MockMultipartFile file = new MockMultipartFile(
-                "file", 
-                "test.xlsx", 
-                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", 
-                "dummy content".getBytes()
+    void shouldAcceptBatchUpload() throws Exception {
+        MockMultipartFile epicollectFile = new MockMultipartFile(
+                "epicollect", 
+                "metadata.csv", 
+                "text/csv", 
+                "Site ID,Location Name\nA10,Pretoria".getBytes()
         );
 
-        // Act & Assert
-        mockMvc.perform(multipart("/api/v1/etl/upload")
-                        .file(file)
-                        .param("fileType", "EPICOLLECT"))
-                .andExpect(status().isOk());
+        when(etlService.processBatch(any(), any(), any(), any())).thenReturn(Collections.emptyList());
+
+        mockMvc.perform(multipart("/api/v1/etl/upload-batch")
+                        .file(epicollectFile))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.message").value("Batch processed successfully."));
     }
 
     @Test
-    void shouldRejectEmptyFile() throws Exception {
-        // Arrange
-        MockMultipartFile emptyFile = new MockMultipartFile(
-                "file", "empty.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new byte[0]
+    void shouldRejectWhenNoFilesProvided() throws Exception {
+        mockMvc.perform(multipart("/api/v1/etl/upload-batch"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("No files provided for upload."));
+    }
+
+    @Test
+    void shouldHandleValidationErrorsGracefully() throws Exception {
+        MockMultipartFile badFile = new MockMultipartFile(
+                "epicollect", 
+                "bad.csv", 
+                "text/csv", 
+                "missing headers".getBytes()
         );
 
-        // Act & Assert
-        mockMvc.perform(multipart("/api/v1/etl/upload")
-                        .file(emptyFile)
-                        .param("fileType", "EPICOLLECT"))
-                .andExpect(status().isBadRequest()); // Maps to our logic handling empty files
+        when(etlService.processBatch(any(), any(), any(), any()))
+                .thenThrow(new IllegalArgumentException("Critical column 'Site ID' is missing"));
+
+        mockMvc.perform(multipart("/api/v1/etl/upload-batch")
+                        .file(badFile))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string("Validation Error: Critical column 'Site ID' is missing"));
     }
 }
