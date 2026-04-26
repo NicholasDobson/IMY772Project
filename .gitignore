@@ -5,4 +5,8 @@
 .vscode
 *.pdf
 exampledata
-772-Data 
+772-Data
+
+# Local uploaded images
+backend/uploads/
+uploads/ 
