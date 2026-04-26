@@ -13,6 +13,7 @@ const baseNavItems = [
   { name: 'River detail', path: '/river', icon: 'pi-chart-line' },
   { name: 'Education Blog', path: '/education', icon: 'pi-book' },
   { name: 'Data Upload', path: '/upload', icon: 'pi-upload', adminOnly: true },
+  { name: 'User Management', path: '/admin/users', icon: 'pi-users', adminOnly: true },
 ]
 
 const navItems = computed(() =>
