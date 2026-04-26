@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 
 const COGNITO_DOMAIN = import.meta.env.VITE_COGNITO_DOMAIN as string
 const CLIENT_ID = import.meta.env.VITE_COGNITO_CLIENT_ID as string
+const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET as string | undefined
 const REDIRECT_URI = (import.meta.env.VITE_COGNITO_REDIRECT_URI as string) || 'http://localhost:5173/'
 
 function parseJwt(token: string): Record<string, unknown> {
@@ -35,9 +36,31 @@ async function generateCodeChallenge(verifier: string): Promise<string> {
     .replace(/=/g, '')
 }
 
+// Reads an id/access token regardless of which storage key format was used.
+// Our PKCE flow writes to 'id_token'/'access_token'; the Cognito SDK writes to
+// 'CognitoIdentityServiceProvider.{clientId}.{userId}.idToken'.
+function readStoredTokens(): { idToken: string | null; accessToken: string | null } {
+  const own = localStorage.getItem('id_token')
+  if (own) return { idToken: own, accessToken: localStorage.getItem('access_token') }
+
+  // Scan for Cognito SDK keys scoped to THIS app's client ID only
+  const sdkPrefix = `CognitoIdentityServiceProvider.${CLIENT_ID}.`
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i)
+    if (key?.startsWith(sdkPrefix) && key.endsWith('.idToken')) {
+      return {
+        idToken: localStorage.getItem(key),
+        accessToken: localStorage.getItem(key.replace('.idToken', '.accessToken')),
+      }
+    }
+  }
+  return { idToken: null, accessToken: null }
+}
+
 export const useAuthStore = defineStore('auth', () => {
-  const idToken = ref<string | null>(localStorage.getItem('id_token'))
-  const accessToken = ref<string | null>(localStorage.getItem('access_token'))
+  const stored = readStoredTokens()
+  const idToken = ref<string | null>(stored.idToken)
+  const accessToken = ref<string | null>(stored.accessToken)
 
   const user = computed<Record<string, unknown> | null>(() => {
     if (!idToken.value) return null
@@ -55,7 +78,7 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => {
     if (!isAuthenticated.value) return false
     const groups = (user.value?.['cognito:groups'] as string[]) ?? []
-    return groups.includes('admin')
+    return groups.includes('Admins')
   })
 
   async function login() {
@@ -77,14 +100,16 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function handleCallback(code: string) {
     const verifier = sessionStorage.getItem('pkce_verifier') ?? ''
+    console.log('[auth] handleCallback — verifier present:', !!verifier, '| client_id:', CLIENT_ID)
 
     const body = new URLSearchParams({
       grant_type: 'authorization_code',
       client_id: CLIENT_ID,
       code,
       redirect_uri: REDIRECT_URI,
-      code_verifier: verifier,
     })
+    if (verifier) body.set('code_verifier', verifier)
+    if (CLIENT_SECRET) body.set('client_secret', CLIENT_SECRET)
 
     const res = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
       method: 'POST',
@@ -92,12 +117,16 @@ export const useAuthStore = defineStore('auth', () => {
       body,
     })
 
+    const rawText = await res.text()
+    console.log('[auth] token exchange status:', res.status, '| response:', rawText)
+
     if (!res.ok) {
-      console.error('Token exchange failed', await res.text())
+      console.error('[auth] Token exchange failed — see response above')
       return
     }
 
-    const tokens = await res.json()
+    const tokens = JSON.parse(rawText)
+
     idToken.value = tokens.id_token
     accessToken.value = tokens.access_token
     localStorage.setItem('id_token', tokens.id_token)
@@ -110,6 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function initialize() {
     const params = new URLSearchParams(window.location.search)
     const code = params.get('code')
+    console.log('[auth] initialize — code in URL:', !!code, '| search:', window.location.search)
     if (code) {
       await handleCallback(code)
     }
