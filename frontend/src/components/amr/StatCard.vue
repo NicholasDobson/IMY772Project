@@ -70,12 +70,12 @@ withDefaults(defineProps<Props>(), {
 }
 
 .stat-value {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 34px;
-  font-weight: 400;
+  font-weight: 700;
   color: var(--c-heading);
   line-height: 1;
-  letter-spacing: -1px;
+  letter-spacing: -0.5px;
   margin-bottom: 8px;
 }
 
