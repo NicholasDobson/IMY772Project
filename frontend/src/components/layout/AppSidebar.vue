@@ -14,6 +14,7 @@ const baseNavItems = [
   { name: 'Education Blog', path: '/education', icon: 'pi-book' },
   { name: 'Data Upload', path: '/upload', icon: 'pi-upload', adminOnly: true },
   { name: 'User Management', path: '/admin/users', icon: 'pi-users', adminOnly: true },
+  { name: 'Knowledge Base', path: '/admin/knowledge', icon: 'pi-database', adminOnly: true },
 ]
 
 const navItems = computed(() =>

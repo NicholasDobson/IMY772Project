@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, computed, nextTick, watch } from 'vue'
-import { askAdvisor, type AdvisorContextType } from '@/api/advisor'
+import { askAdvisor, type AdvisorContextType, type SourceReference } from '@/api/advisor'
 
 interface ChatMessage {
   role: 'user' | 'assistant' | 'system'
   text: string
+  sources?: SourceReference[]
 }
+
+const expandedSources = ref<Record<number, boolean>>({})
 
 const open      = ref(false)
 const loading   = ref(false)
@@ -43,7 +46,11 @@ async function send(): Promise<void> {
       contextId: ctxId.value.trim() || undefined,
     })
     if (res.ok && res.reply) {
-      messages.value.push({ role: 'assistant', text: res.reply })
+      messages.value.push({
+        role: 'assistant',
+        text: res.reply,
+        sources: res.sources?.length ? res.sources : undefined,
+      })
     } else {
       messages.value.push({
         role: 'assistant',
@@ -134,7 +141,23 @@ const placeholderForCtx = computed(() => {
             class="advisor-msg"
             :class="`advisor-msg--${m.role}`"
           >
-            <div class="advisor-bubble-text">{{ m.text }}</div>
+            <div>
+              <div class="advisor-bubble-text">{{ m.text }}</div>
+              <div v-if="m.sources?.length" class="advisor-sources">
+                <button class="sources-toggle" @click="expandedSources[i] = !expandedSources[i]">
+                  <i class="pi pi-book"></i>
+                  {{ m.sources.length }} source(s)
+                  <i :class="expandedSources[i] ? 'pi pi-chevron-up' : 'pi pi-chevron-down'" style="font-size:9px"></i>
+                </button>
+                <div v-if="expandedSources[i]" class="sources-list">
+                  <div v-for="src in m.sources" :key="src.documentId" class="source-item">
+                    <span class="source-title">{{ src.documentTitle }}</span>
+                    <span v-if="src.pageNumbers" class="source-pages">pp. {{ src.pageNumbers }}</span>
+                    <span class="source-score">{{ (src.similarity * 100).toFixed(0) }}%</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div v-if="loading" class="advisor-msg advisor-msg--assistant">
             <div class="advisor-bubble-text advisor-typing">
@@ -312,6 +335,61 @@ const placeholderForCtx = computed(() => {
   color: var(--c-text-dim);
   font-style: italic;
   font-size: 11.5px;
+}
+
+/* ── Sources ─────────────────────────────────────────────── */
+.advisor-sources {
+  max-width: 82%;
+  margin-top: 4px;
+}
+.sources-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--c-text-muted);
+  font-size: 10.5px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+.sources-toggle:hover {
+  color: var(--c-brand);
+}
+.sources-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 6px 8px;
+  background: var(--c-brand-dim);
+  border-radius: 6px;
+  border: 1px solid var(--c-border);
+}
+.source-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--c-text-muted);
+}
+.source-title {
+  font-weight: 500;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 160px;
+}
+.source-pages {
+  font-size: 9.5px;
+  color: var(--c-text-dim);
+}
+.source-score {
+  font-size: 9.5px;
+  font-weight: 600;
+  color: var(--c-green);
+  margin-left: auto;
 }
 
 /* ── Typing dots ──────────────────────────────────────────── */
