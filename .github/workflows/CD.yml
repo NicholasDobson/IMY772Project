@@ -155,8 +155,9 @@ jobs:
   #         mkdir -p ~/.ssh
   #         echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
   #         chmod 600 ~/.ssh/ec2_key.pem
+  #         trap "rm -f ~/.ssh/ec2_key.pem" EXIT
 
-  #         EC2_HOST="ubuntu@ec2-54-224-228-41.compute-1.amazonaws.com"
+  #         EC2_HOST="ubuntu@${{ secrets.EC2_HOST }}"
   #         SSH_OPTS="-i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no"
 
   #         # Copy docker-compose.yml for PostgreSQL database
@@ -209,7 +210,7 @@ jobs:
   #           fi
   #         EOF
 
-  #         rm -f ~/.ssh/ec2_key.pem
+  #         # SSH key is cleaned up by the trap above
 
   # post-deployment-monitoring:
   #   name: Post-Deployment Monitoring
