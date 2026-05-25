@@ -1,0 +1,274 @@
+name: Continuous Deployment Pipeline
+# OPTIMIZED FOR AWS FREE TIER ONLY
+# - S3 Static Website Hosting (5GB storage + 15GB transfer/month)
+# - EC2 t2.micro instance (750 hours/month = 1 instance full-time)
+
+on:
+  workflow_run:
+    workflows: ["Continuous Integration Pipeline"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  testing_phase:
+    name: test auto run
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for CI to complete
+        run: |
+          echo "Waiting for CI workflow to complete..."
+
+
+  # deploy-staging:
+  #   name: Deploy to Staging
+  #   runs-on: ubuntu-latest
+  #   if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  #   environment:
+  #     name: staging
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #         cache-dependency-path: ./frontend/package-lock.json
+
+  #     - name: Build Frontend for staging
+  #       working-directory: ./frontend
+  #       env:
+  #         VITE_API_URL: https://${{ secrets.EC2_PRODUCTION_API }}
+  #         VITE_API_BASE_URL: https://${{ secrets.EC2_PRODUCTION_API }}/api
+  #         VITE_ENVIRONMENT: staging
+  #       run: |
+  #         npm install --no-fund --no-audit
+  #         npm run build
+
+  #     - name: Deploy Frontend to S3 Staging
+  #       uses: jakejarvis/s3-sync-action@v0.5.1
+  #       with:
+  #         args: --delete
+  #       env:
+  #         AWS_S3_BUCKET: ${{ secrets.AWS_S3_STAGING_BUCKET }}
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         SOURCE_DIR: frontend/dist
+
+  #     - name: Configure S3 Website Hosting for Staging
+  #       run: |
+  #         aws s3 website s3://${{ secrets.AWS_S3_STAGING_BUCKET }} \
+  #           --index-document index.html \
+  #           --error-document index.html
+  #         echo "S3 website hosting configured for staging"
+
+  #     - name: Verify Staging Deployment
+  #       run: |
+  #         FRONTEND_URL="https://${{ secrets.AWS_S3_STAGING_BUCKET }}.s3-website-${{ secrets.AWS_DEFAULT_REGION }}.amazonaws.com"
+  #         if curl -f -s --head "$FRONTEND_URL" > /dev/null; then
+  #           echo "Frontend: HEALTHY"
+  #         else
+  #           echo "Frontend: WARNING - Could not verify"
+  #         fi
+
+  # deploy-production:
+  #   name: Deploy to Production
+  #   needs: [deploy-staging]
+  #   runs-on: ubuntu-latest
+  #   environment:
+  #     name: production
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+  #     - name: Configure AWS credentials
+  #       uses: aws-actions/configure-aws-credentials@v4
+  #       with:
+  #         aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+  #     - name: Setup Node.js
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '22'
+  #         cache: 'npm'
+  #         cache-dependency-path: ./frontend/package-lock.json
+
+  #     - name: Build Frontend for production
+  #       working-directory: ./frontend
+  #       env:
+  #         VITE_API_URL: https://${{ secrets.EC2_PRODUCTION_API }}
+  #         VITE_API_BASE_URL: https://${{ secrets.EC2_PRODUCTION_API }}/api
+  #         VITE_ENVIRONMENT: production
+  #       run: |
+  #         npm install --no-fund --no-audit
+  #         npm run build
+
+  #     - name: Setup Java
+  #       uses: actions/setup-java@v4
+  #       with:
+  #         java-version: '21'
+  #         distribution: 'temurin'
+  #         cache: 'maven'
+
+  #     - name: Build Backend JAR
+  #       working-directory: ./backend
+  #       run: |
+  #         chmod +x ./mvnw
+  #         ./mvnw package -DskipTests --no-transfer-progress
+  #         echo "Backend JAR built: $(ls target/*.jar)"
+
+  #     - name: Deploy Frontend to S3 Production
+  #       uses: jakejarvis/s3-sync-action@v0.5.1
+  #       with:
+  #         args: --delete
+  #       env:
+  #         AWS_S3_BUCKET: ${{ secrets.AWS_S3_PRODUCTION_BUCKET }}
+  #         AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  #         AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  #         AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+  #         SOURCE_DIR: frontend/dist
+
+  #     - name: Configure S3 Website Hosting for Production
+  #       run: |
+  #         aws s3 website s3://${{ secrets.AWS_S3_PRODUCTION_BUCKET }} \
+  #           --index-document index.html \
+  #           --error-document index.html
+  #         echo "S3 website hosting configured for production"
+
+  #     - name: Deploy Backend and Database to EC2
+  #       run: |
+  #         mkdir -p ~/.ssh
+  #         echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/ec2_key.pem
+  #         chmod 600 ~/.ssh/ec2_key.pem
+
+  #         EC2_HOST="ubuntu@ec2-54-224-228-41.compute-1.amazonaws.com"
+  #         SSH_OPTS="-i ~/.ssh/ec2_key.pem -o StrictHostKeyChecking=no"
+
+  #         # Copy docker-compose.yml for PostgreSQL database
+  #         scp $SSH_OPTS docker-compose.yml $EC2_HOST:/var/www/app/docker-compose.yml
+
+  #         # Copy backend JAR
+  #         scp $SSH_OPTS backend/target/backend-*.jar $EC2_HOST:/tmp/backend.jar
+
+  #         ssh $SSH_OPTS $EC2_HOST << 'EOF'
+  #           set -e
+
+  #           cd /var/www/app
+
+  #           # Start PostgreSQL via Docker Compose (postgres service only, not pgadmin)
+  #           docker compose up -d postgres
+  #           echo "Database container started"
+
+  #           # Wait for PostgreSQL to be ready
+  #           until docker compose exec -T postgres pg_isready -U postgres; do
+  #             echo "Waiting for database..."
+  #             sleep 2
+  #           done
+  #           echo "Database is ready"
+
+  #           # Stop existing backend process
+  #           screen -S backend -X quit 2>/dev/null || true
+  #           sleep 2
+
+  #           # Install new JAR
+  #           mkdir -p /var/www/app/backend
+  #           mv /tmp/backend.jar /var/www/app/backend/backend.jar
+
+  #           # Start backend in a detached screen session
+  #           # DB credentials match docker-compose.yml defaults
+  #           screen -dmS backend bash -c '
+  #             cd /var/www/app/backend
+  #             SPRING_DATASOURCE_URL=jdbc:postgresql://localhost:5432/amr_dashboard \
+  #             SPRING_DATASOURCE_USERNAME=postgres \
+  #             SPRING_DATASOURCE_PASSWORD=postgres \
+  #             java -jar backend.jar 2>&1 | tee app.log
+  #           '
+
+  #           # Wait and verify the screen session is running
+  #           sleep 15
+  #           if screen -list | grep -q "backend"; then
+  #             echo "Backend started successfully"
+  #           else
+  #             echo "ERROR: Failed to start backend"
+  #             exit 1
+  #           fi
+  #         EOF
+
+  #         rm -f ~/.ssh/ec2_key.pem
+
+  # post-deployment-monitoring:
+  #   name: Post-Deployment Monitoring
+  #   needs: [deploy-production]
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  #       with:
+  #         ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
+
+  #     - name: Health Check
+  #       run: |
+  #         echo "Running post-deployment health checks..."
+
+  #         echo "Checking Frontend (S3)..."
+  #         FRONTEND_URL="https://trafficguardian.co.za"
+  #         if curl -f -s --head "$FRONTEND_URL" > /dev/null; then
+  #           echo "Frontend: HEALTHY"
+  #         else
+  #           echo "Frontend: Could not verify"
+  #         fi
+
+  #         echo "Checking Backend (EC2)..."
+  #         API_URL="https://${{ secrets.EC2_PRODUCTION_API }}/actuator/health"
+  #         if curl -f -s "$API_URL" | grep -q '"status":"UP"' 2>/dev/null; then
+  #           echo "Backend: HEALTHY"
+  #         else
+  #           echo "Backend: Could not verify health endpoint"
+  #           if curl -f -s "https://${{ secrets.EC2_PRODUCTION_API }}/" > /dev/null; then
+  #             echo "Backend: Server is responding"
+  #           fi
+  #         fi
+
+  #     - name: Performance Check
+  #       run: |
+  #         API_URL="https://${{ secrets.EC2_PRODUCTION_API }}/actuator/health"
+  #         RESPONSE_TIME=$(curl -f -s -w "%{time_total}" -o /dev/null "$API_URL" 2>/dev/null || echo "0")
+
+  #         if [ "$RESPONSE_TIME" != "0" ]; then
+  #           echo "Backend response time: ${RESPONSE_TIME}s"
+  #           RESPONSE_INT=$(echo "$RESPONSE_TIME" | cut -d'.' -f1)
+  #           if [ "$RESPONSE_INT" -eq 0 ]; then
+  #             echo "Performance: Excellent (< 1s)"
+  #           else
+  #             echo "Performance: Could be improved (> 1s)"
+  #           fi
+  #         else
+  #           echo "Could not measure backend response time"
+  #         fi
+
+  #     - name: Monitoring Summary
+  #       run: |
+  #         echo "===== DEPLOYMENT COMPLETE ====="
+  #         echo "Frontend: S3 Static Website"
+  #         echo "Backend:  Spring Boot JAR on EC2 (screen session 'backend')"
+  #         echo "Database: PostgreSQL via Docker Compose on EC2"
+  #         echo ""
+  #         echo "Recommended monitoring:"
+  #         echo "  - Set up UptimeRobot or similar for uptime alerts"
+  #         echo "  - Configure CloudWatch alarms for EC2 CPU/memory"
+  #         echo "  - Watch /actuator/health for backend status"
