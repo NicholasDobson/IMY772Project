@@ -15,8 +15,6 @@ export interface MapLayerState {
 export interface MapShareState {
   pinMode: PinColorMode;
   showRiverLines: boolean;
-  showHeatmap: boolean;
-  showProvinces: boolean;
   layers: MapLayerState[];
 }
 

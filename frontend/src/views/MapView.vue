@@ -17,13 +17,6 @@
           attribution="&copy; <a href='https://carto.com/'>CartoDB</a>"
         ></l-tile-layer>
 
-        <l-geo-json
-          v-if="showProvinces && provincesGeoJson"
-          :key="provinceLayerKey"
-          :geojson="provincesGeoJson"
-          :options="provinceLayerOptions"
-        />
-
         <l-polyline
           v-for="line in riverPolylines"
           :key="line.river"
@@ -82,29 +75,6 @@
                 {{ item.level }}
               </div>
             </template>
-            <div v-if="showHeatmap" class="legend-heatmap">
-              <div class="map-legend-title" style="margin-top: 8px">Heatmap intensity</div>
-              <div class="heatmap-gradient-bar"></div>
-              <div class="heatmap-gradient-labels">
-                <span>Low</span>
-                <span>High AMR</span>
-              </div>
-            </div>
-            <div v-if="showProvinces" class="legend-provinces">
-              <div class="map-legend-title" style="margin-top: 8px">Provinces (site count)</div>
-              <div class="legend-row legend-row--muted">
-                <span class="layer-dot" style="background: #94a3b8"></span> None
-              </div>
-              <div class="legend-row legend-row--muted">
-                <span class="layer-dot" style="background: #2563eb"></span> 1 site
-              </div>
-              <div class="legend-row legend-row--muted">
-                <span class="layer-dot" style="background: #d97706"></span> 2–3 sites
-              </div>
-              <div class="legend-row legend-row--muted">
-                <span class="layer-dot" style="background: #dc2626"></span> 4+ sites
-              </div>
-            </div>
           </div>
         </l-control>
 
@@ -123,22 +93,6 @@
               @click="showRiverLines = !showRiverLines"
             >
               <i class="pi pi-share-alt"></i>
-            </button>
-            <button
-              type="button"
-              :class="{ active: showHeatmap }"
-              title="Toggle AMR intensity heatmap"
-              @click="showHeatmap = !showHeatmap"
-            >
-              <i class="pi pi-sun"></i>
-            </button>
-            <button
-              type="button"
-              :class="{ active: showProvinces }"
-              title="Toggle province boundaries"
-              @click="showProvinces = !showProvinces"
-            >
-              <i class="pi pi-globe"></i>
             </button>
           </div>
         </l-control>
@@ -160,12 +114,6 @@
           </div>
         </l-control>
       </l-map>
-
-      <MapHeatLayer
-        :map="heatmapMap"
-        :points="heatPoints"
-        :enabled="showHeatmap"
-      />
     </div>
 
     <div v-if="compareSlots.some(Boolean)" class="compare-bar">
@@ -470,9 +418,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import L from 'leaflet';
-import { LMap, LTileLayer, LMarker, LTooltip, LControl, LPolyline, LGeoJson } from '@vue-leaflet/vue-leaflet';
-import type { GeoJSON } from 'geojson';
-import MapHeatLayer from '@/components/map/MapHeatLayer.vue';
+import { LMap, LTileLayer, LMarker, LTooltip, LControl, LPolyline } from '@vue-leaflet/vue-leaflet';
 import {
   decodeMapState,
   encodeMapState,
@@ -480,7 +426,6 @@ import {
   type MapShareState,
   type PinColorMode,
 } from '@/utils/mapShareState';
-import { normalizeProvinceName, provinceFillColor, provinceForRiver } from '@/utils/saProvinces';
 
 const router = useRouter();
 const route = useRoute();
@@ -606,9 +551,6 @@ const zoom = ref(10);
 const center = ref<[number, number]>([ -25.747, 28.229 ]);
 const pinColorMode = ref<PinColorMode>('layer');
 const showRiverLines = ref(true);
-const showHeatmap = ref(false);
-const showProvinces = ref(true);
-const provincesGeoJson = ref<GeoJSON.FeatureCollection | null>(null);
 const shareToast = ref('');
 const compareSlots = ref<[string | null, string | null]>([null, null]);
 
@@ -693,73 +635,6 @@ const canOpenComparison = computed(
   () => compareSlots.value[0] && compareSlots.value[1] && compareSlots.value[0] !== compareSlots.value[1],
 );
 
-const heatPoints = computed<[number, number, number][]>(() => {
-  const points: [number, number, number][] = [];
-  const seen = new Set<string>();
-
-  for (const set of filterSets.value) {
-    if (!set.visible) continue;
-    for (const marker of set.markers) {
-      if (seen.has(marker.siteId)) continue;
-      seen.add(marker.siteId);
-      const intensity = Math.max(0.12, Math.min(1, marker.resistantPercent / 100));
-      points.push([marker.latitude, marker.longitude, intensity]);
-    }
-  }
-  return points;
-});
-
-const provinceSiteCounts = computed(() => {
-  const counts = new Map<string, number>();
-  const seen = new Set<string>();
-
-  for (const set of filterSets.value) {
-    if (!set.visible) continue;
-    for (const marker of set.markers) {
-      if (seen.has(marker.siteId)) continue;
-      seen.add(marker.siteId);
-      const province = provinceForRiver(marker.riverName);
-      counts.set(province, (counts.get(province) ?? 0) + 1);
-    }
-  }
-  return counts;
-});
-
-const provinceLayerKey = computed(() =>
-  [...provinceSiteCounts.value.entries()].map(([k, v]) => `${k}:${v}`).join('|'),
-);
-
-const heatmapMap = computed((): L.Map | null => leafletMap.value as L.Map | null);
-
-const provinceLayerOptions = computed(() => ({
-  style: (feature?: GeoJSON.Feature) => {
-    const name = normalizeProvinceName(String(feature?.properties?.shapeName ?? ''));
-    const count = provinceSiteCounts.value.get(name) ?? 0;
-    return {
-      color: '#475569',
-      weight: 1.5,
-      fillColor: provinceFillColor(count),
-      fillOpacity: count > 0 ? 0.24 : 0.05,
-    };
-  },
-  onEachFeature: (feature: GeoJSON.Feature, layer: L.Layer) => {
-    const name = normalizeProvinceName(String(feature.properties?.shapeName ?? ''));
-    const count = provinceSiteCounts.value.get(name) ?? 0;
-    const path = layer as L.Path;
-    path.bindTooltip(
-      `<strong>${name}</strong><br/>${count} filtered site${count === 1 ? '' : 's'}`,
-      { sticky: true },
-    );
-    path.on('mouseover', () => path.setStyle({ weight: 2.5, fillOpacity: 0.35 }));
-    path.on('mouseout', () =>
-      path.setStyle({
-        weight: 1.5,
-        fillOpacity: count > 0 ? 0.24 : 0.05,
-      }),
-    );
-  },
-}));
-
 function advancedSelectionCount(set: FilterSet) {
   return set.advancedFilters.rivers.length + set.advancedFilters.organisms.length + set.advancedFilters.sirProfiles.length;
 }
@@ -775,30 +650,19 @@ function setHasActiveFilters(set: FilterSet) {
 const hasActiveFilters = computed(() => filterSets.value.some(setHasActiveFilters));
 
 onMounted(async () => {
-  await Promise.all([fetchFilterOptions(), loadProvincesGeoJson()]);
+  await fetchFilterOptions();
   applyStateFromUrl();
   await fetchAllMarkers();
   urlSyncEnabled.value = true;
 });
 
 watch(
-  () => [filterSets.value, pinColorMode.value, showRiverLines.value, showHeatmap.value, showProvinces.value],
+  () => [filterSets.value, pinColorMode.value, showRiverLines.value],
   () => {
     if (urlSyncEnabled.value) syncUrlFromState();
   },
   { deep: true },
 );
-
-async function loadProvincesGeoJson() {
-  try {
-    const res = await fetch(`${import.meta.env.BASE_URL}geo/sa-provinces.geojson`);
-    if (res.ok) {
-      provincesGeoJson.value = (await res.json()) as GeoJSON.FeatureCollection;
-    }
-  } catch (error) {
-    console.error('Failed to load province boundaries', error);
-  }
-}
 
 async function fetchFilterOptions() {
   try {
@@ -960,8 +824,7 @@ function onMarkerClick(siteId: string) {
 }
 
 function onMapReady() {
-  const map = (mapRef.value as { leafletObject?: L.Map } | null)?.leafletObject;
-  leafletMap.value = (map ?? null) as L.Map | null;
+  leafletMap.value = (mapRef.value as { leafletObject?: L.Map } | null)?.leafletObject ?? null;
 }
 
 function fitMapBounds() {
@@ -976,8 +839,6 @@ function buildShareState(): MapShareState {
   return {
     pinMode: pinColorMode.value,
     showRiverLines: showRiverLines.value,
-    showHeatmap: showHeatmap.value,
-    showProvinces: showProvinces.value,
     layers: filterSets.value.map((set) => ({
       trip: set.trip,
       riverName: set.selectedFilters.riverName,
@@ -999,8 +860,6 @@ function applyStateFromUrl() {
 
   pinColorMode.value = state.pinMode ?? 'layer';
   showRiverLines.value = state.showRiverLines ?? true;
-  showHeatmap.value = state.showHeatmap ?? false;
-  showProvinces.value = state.showProvinces ?? true;
 
   filterSets.value = state.layers.map((layer, index) => {
     const set = createFilterSet(index);
@@ -1954,33 +1813,6 @@ function formatPhDo(summary: SiteSummary) {
   background: var(--c-brand-dim);
   border-color: var(--c-brand);
   color: var(--c-brand);
-}
-
-.legend-heatmap {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--c-border);
-}
-
-.heatmap-gradient-bar {
-  height: 8px;
-  border-radius: 4px;
-  background: linear-gradient(90deg, #3b82f6, #22c55e, #eab308, #f97316, #dc2626);
-  margin: 6px 0 4px;
-}
-
-.heatmap-gradient-labels {
-  display: flex;
-  justify-content: space-between;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 9px;
-  color: var(--c-text-muted);
-}
-
-.legend-provinces {
-  margin-top: 4px;
-  padding-top: 8px;
-  border-top: 1px dashed var(--c-border);
 }
 </style>
 
