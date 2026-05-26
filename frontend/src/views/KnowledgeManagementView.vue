@@ -2,7 +2,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import {
   getDocuments,
-  uploadDocument,
+  uploadBatch,
   deleteDocument,
   getDocumentStatus,
   reprocessDocument,
@@ -15,8 +15,7 @@ const uploading = ref(false)
 const error = ref('')
 const success = ref('')
 
-const selectedFile = ref<File | null>(null)
-const titleInput = ref('')
+const selectedFiles = ref<File[]>([])
 const dragOver = ref(false)
 const visible = ref(false)
 
@@ -69,39 +68,51 @@ function startPolling(docId: number) {
   pollingTimers.set(docId, timer)
 }
 
+function addFiles(files: FileList | null | undefined) {
+  if (!files) return
+  const pdfs = Array.from(files).filter((f) => f.type === 'application/pdf')
+  const nonPdf = Array.from(files).length - pdfs.length
+  if (nonPdf > 0) error.value = `${nonPdf} non-PDF file(s) skipped`
+  // dedupe by name+size
+  const existing = new Set(selectedFiles.value.map((f) => f.name + f.size))
+  pdfs.forEach((f) => {
+    if (!existing.has(f.name + f.size)) selectedFiles.value.push(f)
+  })
+}
+
 function onDrop(e: DragEvent) {
   dragOver.value = false
-  const file = e.dataTransfer?.files[0]
-  if (file && file.type === 'application/pdf') {
-    selectedFile.value = file
-    if (!titleInput.value) titleInput.value = file.name.replace(/\.pdf$/i, '')
-  } else {
-    error.value = 'Only PDF files are accepted'
-  }
+  addFiles(e.dataTransfer?.files)
 }
 
 function onFileSelect(e: Event) {
   const input = e.target as HTMLInputElement
-  const file = input.files?.[0]
-  if (file) {
-    selectedFile.value = file
-    if (!titleInput.value) titleInput.value = file.name.replace(/\.pdf$/i, '')
-  }
+  addFiles(input.files)
   input.value = ''
 }
 
+function removeFile(idx: number) {
+  selectedFiles.value.splice(idx, 1)
+}
+
 async function handleUpload() {
-  if (!selectedFile.value) return
+  if (selectedFiles.value.length === 0) return
   uploading.value = true
   error.value = ''
   success.value = ''
   try {
-    const doc = await uploadDocument(selectedFile.value, titleInput.value || undefined)
-    documents.value.unshift(doc)
-    startPolling(doc.documentId)
-    selectedFile.value = null
-    titleInput.value = ''
-    success.value = 'Document uploaded and processing started'
+    const result = await uploadBatch(selectedFiles.value)
+    result.accepted.forEach((doc) => {
+      documents.value.unshift(doc)
+      startPolling(doc.documentId)
+    })
+    const count = result.accepted.length
+    success.value = `${count} document(s) uploaded and processing started`
+    if (result.rejected.length) {
+      error.value = `${result.rejected.length} file(s) rejected: ` +
+        result.rejected.map((r) => r.filename).join(', ')
+    }
+    selectedFiles.value = []
     setTimeout(() => (success.value = ''), 4000)
   } catch (e: any) {
     error.value = e.message
@@ -176,43 +187,39 @@ function formatDate(dateStr: string | null): string {
 
     <!-- Upload Section -->
     <section class="upload-section">
-      <h2 class="section-title">Upload Document</h2>
+      <h2 class="section-title">Upload Documents</h2>
       <div
         class="drop-zone"
-        :class="{ 'drop-zone--active': dragOver, 'drop-zone--has-file': selectedFile }"
+        :class="{ 'drop-zone--active': dragOver, 'drop-zone--has-file': selectedFiles.length }"
         @dragover.prevent="dragOver = true"
         @dragleave="dragOver = false"
         @drop.prevent="onDrop"
       >
-        <template v-if="!selectedFile">
-          <i class="pi pi-cloud-upload drop-icon"></i>
-          <p class="drop-text">Drag & drop a PDF here</p>
-          <p class="drop-sub">or</p>
-          <label class="browse-btn">
-            Browse files
-            <input type="file" accept=".pdf,application/pdf" hidden @change="onFileSelect" />
-          </label>
-        </template>
-        <template v-else>
-          <i class="pi pi-file-pdf drop-icon drop-icon--file"></i>
-          <p class="drop-text">{{ selectedFile.name }}</p>
-          <p class="drop-sub">{{ formatSize(selectedFile.size) }}</p>
-          <button class="clear-btn" @click="selectedFile = null; titleInput = ''">
-            <i class="pi pi-times"></i> Remove
-          </button>
-        </template>
+        <i class="pi pi-cloud-upload drop-icon"></i>
+        <p class="drop-text">Drag & drop PDFs here</p>
+        <p class="drop-sub">or</p>
+        <label class="browse-btn">
+          Browse files
+          <input type="file" accept=".pdf,application/pdf" multiple hidden @change="onFileSelect" />
+        </label>
       </div>
 
-      <div v-if="selectedFile" class="upload-controls">
-        <input
-          v-model="titleInput"
-          type="text"
-          class="title-input"
-          placeholder="Document title (optional)"
-        />
+      <div v-if="selectedFiles.length" class="file-queue">
+        <div v-for="(f, idx) in selectedFiles" :key="f.name + f.size" class="queue-item">
+          <i class="pi pi-file-pdf queue-icon"></i>
+          <span class="queue-name">{{ f.name }}</span>
+          <span class="queue-size">{{ formatSize(f.size) }}</span>
+          <button class="queue-remove" @click="removeFile(idx)">
+            <i class="pi pi-times"></i>
+          </button>
+        </div>
+      </div>
+
+      <div v-if="selectedFiles.length" class="upload-controls">
+        <span class="queue-count">{{ selectedFiles.length }} file(s) queued</span>
         <button class="upload-btn" :disabled="uploading" @click="handleUpload">
           <i :class="uploading ? 'pi pi-spin pi-spinner' : 'pi pi-upload'"></i>
-          {{ uploading ? 'Uploading...' : 'Upload & Process' }}
+          {{ uploading ? 'Uploading...' : `Upload & Process ${selectedFiles.length} file(s)` }}
         </button>
       </div>
     </section>
@@ -437,6 +444,60 @@ function formatDate(dateStr: string | null): string {
   color: var(--c-text-muted);
   font-size: 11.5px;
   cursor: pointer;
+}
+
+.file-queue {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: 6px;
+  background: var(--c-surface);
+}
+.queue-icon {
+  color: var(--c-red);
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.queue-name {
+  font-size: 12px;
+  color: var(--c-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+.queue-size {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  flex-shrink: 0;
+}
+.queue-remove {
+  background: none;
+  border: none;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 2px 4px;
+  flex-shrink: 0;
+}
+.queue-remove:hover {
+  color: var(--c-red);
+}
+.queue-count {
+  font-size: 12px;
+  color: var(--c-text-muted);
+  align-self: center;
+  flex: 1;
 }
 
 .upload-controls {

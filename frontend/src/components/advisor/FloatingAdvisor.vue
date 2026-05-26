@@ -10,17 +10,14 @@ interface ChatMessage {
 
 const expandedSources = ref<Record<number, boolean>>({})
 
+const GREETING = 'Hi! I\'m your AMRWatch Advisor. Ask me about water safety, MDRO organisms, or whether a river site is risky. For specific sites or organisms, pick a context above.'
+
 const open      = ref(false)
 const loading   = ref(false)
 const input     = ref('')
 const ctxType   = ref<AdvisorContextType>('general')
 const ctxId     = ref('')
-const messages  = ref<ChatMessage[]>([
-  {
-    role: 'system',
-    text: 'Hi! I\'m your AMRWatch Advisor. Ask me about water safety, MDRO organisms, or whether a river site is risky. For specific sites or organisms, pick a context above.',
-  },
-])
+const messages  = ref<ChatMessage[]>([{ role: 'system', text: GREETING }])
 const bodyRef   = ref<HTMLDivElement | null>(null)
 
 const MAX_CHARS = 500
@@ -29,6 +26,13 @@ const canSend   = computed(() => !loading.value && input.value.trim().length > 0
 
 function toggle(): void {
   open.value = !open.value
+}
+
+function newChat(): void {
+  messages.value = [{ role: 'system', text: GREETING }]
+  input.value = ''
+  expandedSources.value = {}
+  loading.value = false
 }
 
 async function send(): Promise<void> {
@@ -109,9 +113,14 @@ const placeholderForCtx = computed(() => {
             <h3 class="advisor-title">AMRWatch Advisor</h3>
             <p class="advisor-sub">Water safety &amp; AMR guidance</p>
           </div>
-          <button class="advisor-close" aria-label="Close" @click="toggle">
-            <i class="pi pi-times"></i>
-          </button>
+          <div class="advisor-header-actions">
+            <button class="advisor-new" aria-label="New chat" title="New chat" @click="newChat">
+              <i class="pi pi-plus"></i>
+            </button>
+            <button class="advisor-close" aria-label="Close" @click="toggle">
+              <i class="pi pi-times"></i>
+            </button>
+          </div>
         </header>
 
         <!-- Context selector -->
@@ -228,10 +237,10 @@ const placeholderForCtx = computed(() => {
   position: absolute;
   bottom: 68px;
   right: 0;
-  width: 360px;
+  width: 420px;
   max-width: calc(100vw - 36px);
-  height: 520px;
-  max-height: calc(100vh - 120px);
+  height: 620px;
+  max-height: calc(100vh - 100px);
   background: var(--c-card);
   border: 1px solid var(--c-border);
   border-radius: 12px;
@@ -260,6 +269,12 @@ const placeholderForCtx = computed(() => {
   color: var(--c-text-dim);
   margin: 2px 0 0;
 }
+.advisor-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.advisor-new,
 .advisor-close {
   background: transparent;
   border: none;
@@ -268,6 +283,7 @@ const placeholderForCtx = computed(() => {
   font-size: 14px;
   padding: 4px 6px;
 }
+.advisor-new:hover,
 .advisor-close:hover { color: var(--c-heading); }
 
 /* ── Context selector ─────────────────────────────────────── */

@@ -38,6 +38,23 @@ export async function uploadDocument(file: File, title?: string): Promise<Knowle
   return res.json()
 }
 
+export interface BatchUploadResult {
+  accepted: KnowledgeDocumentDTO[]
+  rejected: { filename: string; error: string }[]
+}
+
+export async function uploadBatch(files: File[]): Promise<BatchUploadResult> {
+  const form = new FormData()
+  files.forEach((f) => form.append('files', f))
+
+  const res = await fetch(`${API_BASE}/batch`, { method: 'POST', body: form })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Batch upload failed' }))
+    throw new Error(err.error || 'Batch upload failed')
+  }
+  return res.json()
+}
+
 export async function deleteDocument(id: number): Promise<void> {
   const res = await fetch(`${API_BASE}/${id}`, { method: 'DELETE' })
   if (!res.ok) throw new Error('Failed to delete document')
