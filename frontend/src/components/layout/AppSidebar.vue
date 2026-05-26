@@ -130,7 +130,7 @@ function isActive(path: string) {
 }
 
 .amr-wordmark {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 17px;
   font-weight: 700;
   line-height: 1;

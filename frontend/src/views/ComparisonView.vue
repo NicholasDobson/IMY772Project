@@ -861,7 +861,7 @@ const metricRows = computed(() => [
   margin-bottom: 22px;
 }
 .page-title {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: var(--c-heading);
@@ -917,7 +917,7 @@ const metricRows = computed(() => [
   border: 1px solid var(--c-border);
   border-radius: 7px;
   color: var(--c-heading);
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 700;
   padding: 9px 12px;
@@ -957,7 +957,7 @@ const metricRows = computed(() => [
 }
 
 .vs-badge {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 15px;
   font-weight: 700;
   color: var(--c-text-muted);
@@ -1011,7 +1011,7 @@ const metricRows = computed(() => [
 .mini-val {
   font-size: 22px;
   font-weight: 700;
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   line-height: 1.1;
 }
 

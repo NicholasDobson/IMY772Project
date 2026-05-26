@@ -28,7 +28,7 @@
   opacity: 0.45;
 }
 h2 {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 18px;
   font-weight: 700;
   color: var(--c-heading);
