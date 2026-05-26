@@ -8,6 +8,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import za.co.tuks.amrdashboard.backend.dto.FilterOptionsDTO;
 import za.co.tuks.amrdashboard.backend.repository.IsolateRepository;
 import za.co.tuks.amrdashboard.backend.repository.SiteRepository;
+import za.co.tuks.amrdashboard.backend.repository.WaterSampleRepository;
 import za.co.tuks.amrdashboard.backend.repository.WgsMetricsRepository;
 
 import java.util.List;
@@ -25,6 +26,9 @@ class MapServiceTest {
     @Mock
     private WgsMetricsRepository wgsMetricsRepository;
 
+    @Mock
+    private WaterSampleRepository waterSampleRepository;
+
     @InjectMocks
     private MapService mapService;
 
@@ -34,6 +38,7 @@ class MapServiceTest {
         when(siteRepository.findDistinctRivers()).thenReturn(List.of("Apies River"));
         when(isolateRepository.findDistinctOrganisms()).thenReturn(List.of("E. coli"));
         when(wgsMetricsRepository.findDistinctSirProfiles()).thenReturn(List.of("Resistant"));
+        when(waterSampleRepository.findDistinctTripIdentifiers()).thenReturn(List.of("Trip 1"));
 
         // Act
         FilterOptionsDTO options = mapService.getFilterOptions();

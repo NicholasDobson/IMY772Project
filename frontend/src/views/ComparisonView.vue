@@ -98,7 +98,7 @@ const route = useRoute()
 const COLORS = ['#3B82F6', '#EF4444'] as const
 
 const incomingSiteA = (route.query.siteA as string | undefined) ?? ''
-const defaultSiteB = ''
+const incomingSiteB = (route.query.siteB as string | undefined) ?? ''
 
 const selectedIds = ref<[string, string]>(['', ''])
 const tripFilterA = ref<'all' | 'Trip 1' | 'Trip 2'>('all')
@@ -164,7 +164,10 @@ onMounted(async () => {
 
     const siteIds = siteData.map((s) => s.site.siteId)
     const a = incomingSiteA && siteIds.includes(incomingSiteA) ? incomingSiteA : (siteIds[0] ?? '')
-    const b = siteIds.find((id) => id !== a) ?? (siteIds[1] ?? '')
+    const b =
+      incomingSiteB && siteIds.includes(incomingSiteB) && incomingSiteB !== a
+        ? incomingSiteB
+        : (siteIds.find((id) => id !== a) ?? (siteIds[1] ?? ''))
     selectedIds.value = [a, b]
   } catch (e) {
     console.error('Failed to load comparison data:', e)

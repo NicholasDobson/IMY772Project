@@ -16,13 +16,15 @@ public interface SiteRepository extends JpaRepository<Site, String> {
            "LEFT JOIN s.waterSamples ws " +
            "LEFT JOIN ws.isolates i " +
            "LEFT JOIN i.wgsMetrics wgs " +
-           "WHERE (:riverName IS NULL OR s.riverName = :riverName) " +
-           "AND (:organism IS NULL OR i.organismIdentity = :organism) " +
-           "AND (:sirProfile IS NULL OR wgs.predictedSirProfile = :sirProfile)")
+           "WHERE (:riverNames IS NULL OR s.riverName IN :riverNames) " +
+           "AND (:organisms IS NULL OR i.organismIdentity IN :organisms) " +
+           "AND (:sirProfiles IS NULL OR wgs.predictedSirProfile IN :sirProfiles) " +
+           "AND (:tripIds IS NULL OR ws.tripIdentifier IN :tripIds)")
     List<Site> findFilteredSites(
-            @Param("riverName") String riverName,
-            @Param("organism") String organism,
-            @Param("sirProfile") String sirProfile
+            @Param("riverNames") List<String> riverNames,
+            @Param("organisms") List<String> organisms,
+            @Param("sirProfiles") List<String> sirProfiles,
+            @Param("tripIds") List<String> tripIds
     );
 
     // Queries for the dropdown menus
