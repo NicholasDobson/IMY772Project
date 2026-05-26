@@ -27,7 +27,7 @@ class MapControllerTest {
     void shouldReturnFilterOptions() throws Exception {
         // Arrange
         FilterOptionsDTO mockOptions = new FilterOptionsDTO(
-                List.of("Apies River"), List.of("E. coli"), List.of("Resistant")
+                List.of("Apies River"), List.of("E. coli"), List.of("Resistant"), List.of("Trip 1")
         );
         when(mapService.getFilterOptions()).thenReturn(mockOptions);
 
