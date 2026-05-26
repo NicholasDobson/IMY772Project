@@ -19,8 +19,9 @@ public class AdvisorController {
     public ResponseEntity<AdvisorResponse> chat(@RequestBody AdvisorRequest req, HttpServletRequest http) {
         try {
             String ip = clientIp(http);
-            String reply = advisorService.advise(ip, req.getMessage(), req.getContextType(), req.getContextId());
-            return ResponseEntity.ok(AdvisorResponse.ok(reply));
+            AdvisorService.AdvisorResult result = advisorService.advise(
+                ip, req.getMessage(), req.getContextType(), req.getContextId());
+            return ResponseEntity.ok(AdvisorResponse.ok(result.reply(), result.sources()));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(AdvisorResponse.fail(e.getMessage()));
         } catch (IllegalStateException e) {
