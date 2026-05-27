@@ -88,37 +88,70 @@ interface SiteData {
   wgsMetrics: WgsMetrics[]
 }
 
+// ── Constants ──────────────────────────────────────────────────────
 const BASE = 'http://localhost:8080/api/v1'
+const MAX_SLOTS = 5
+const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
+const TRIP_OPTIONS = ['all', 'Trip 1', 'Trip 2'] as const
+type TripFilter = typeof TRIP_OPTIONS[number]
+
 const ALL_SITES = ref<SiteData[]>([])
 const loading = ref(false)
-
 const route = useRoute()
 
-// ── State ──────────────────────────────────────────────────────────
-const COLORS = ['#3B82F6', '#EF4444'] as const
+// ── Slot state — array instead of hardcoded A/B ────────────────────
+interface Slot {
+  siteId: string
+  tripFilter: TripFilter
+}
 
-const incomingSiteA = (route.query.siteA as string | undefined) ?? ''
-const incomingSiteB = (route.query.siteB as string | undefined) ?? ''
+const slots = ref<Slot[]>([
+  { siteId: '', tripFilter: 'all' },
+  { siteId: '', tripFilter: 'all' },
+])
 
-const selectedIds = ref<[string, string]>(['', ''])
-const tripFilterA = ref<'all' | 'Trip 1' | 'Trip 2'>('all')
-const tripFilterB = ref<'all' | 'Trip 1' | 'Trip 2'>('all')
-const selWaterParam = ref<keyof WaterSample>('phLevel')
+// Safe accessor — avoids TS noUncheckedIndexedAccess errors on array[i]
+function getSlot(i: number): Slot {
+  return slots.value[i] ?? { siteId: '', tripFilter: 'all' }
+}
 
-const dataA = computed(() => ALL_SITES.value.find((s) => s.site.siteId === selectedIds.value[0]) ?? null)
-const dataB = computed(() => ALL_SITES.value.find((s) => s.site.siteId === selectedIds.value[1]) ?? null)
+function addSlot() {
+  if (slots.value.length < MAX_SLOTS) {
+    slots.value.push({ siteId: '', tripFilter: 'all' })
+  }
+}
 
-// WGS table pagination — per-slot page state
+function removeSlot(i: number) {
+  if (slots.value.length > 2) {
+    slots.value.splice(i, 1)
+    wgsPages.value.splice(i, 1)
+  }
+}
+
+// ── Derived data per slot ──────────────────────────────────────────
+const slotData = computed(() =>
+  slots.value.map(s => ALL_SITES.value.find(d => d.site.siteId === s.siteId) ?? null)
+)
+
+// ── WGS pagination — one page number per slot ─────────────────────
 const WGS_PAGE_SIZE = 5
-const wgsPageA = ref(1)
-const wgsPageB = ref(1)
+const wgsPages = ref<number[]>([1, 1])
+const activeWgsTab = ref(0)
 
-watch(() => selectedIds.value[0], () => { wgsPageA.value = 1 })
-watch(() => selectedIds.value[1], () => { wgsPageB.value = 1 })
+watch(
+  () => slots.value.map(s => s.siteId),
+  () => { wgsPages.value = slots.value.map(() => 1) },
+  { deep: true }
+)
 
-function wgsPaged(data: SiteData | null, slot: 0 | 1) {
+watch(() => slots.value.length, (len) => {
+  while (wgsPages.value.length < len) wgsPages.value.push(1)
+  if (activeWgsTab.value >= len) activeWgsTab.value = len - 1
+})
+
+function wgsPaged(data: SiteData | null, slotIdx: number) {
   if (!data) return { rows: [] as WgsMetrics[], totalPages: 1, page: 1, total: 0 }
-  const page = slot === 0 ? wgsPageA.value : wgsPageB.value
+  const page = wgsPages.value[slotIdx] ?? 1
   const total = data.wgsMetrics.length
   const totalPages = Math.max(1, Math.ceil(total / WGS_PAGE_SIZE))
   const safe = Math.min(page, totalPages)
@@ -131,10 +164,15 @@ function wgsPaged(data: SiteData | null, slot: 0 | 1) {
   }
 }
 
-function setWgsPage(slot: 0 | 1, page: number) {
-  if (slot === 0) wgsPageA.value = page
-  else wgsPageB.value = page
+function setWgsPage(slotIdx: number, page: number) {
+  wgsPages.value[slotIdx] = page
 }
+
+// ── Water param selector ───────────────────────────────────────────
+const selWaterParam = ref<keyof WaterSample>('phLevel')
+
+// ── Data fetch ─────────────────────────────────────────────────────
+const incomingSiteA = (route.query.siteA as string | undefined) ?? ''
 
 onMounted(async () => {
   loading.value = true
@@ -164,11 +202,9 @@ onMounted(async () => {
 
     const siteIds = siteData.map((s) => s.site.siteId)
     const a = incomingSiteA && siteIds.includes(incomingSiteA) ? incomingSiteA : (siteIds[0] ?? '')
-    const b =
-      incomingSiteB && siteIds.includes(incomingSiteB) && incomingSiteB !== a
-        ? incomingSiteB
-        : (siteIds.find((id) => id !== a) ?? (siteIds[1] ?? ''))
-    selectedIds.value = [a, b]
+    const b = siteIds.find((id) => id !== a) ?? (siteIds[1] ?? '')
+    if (slots.value[0]) slots.value[0].siteId = a
+    if (slots.value[1]) slots.value[1].siteId = b
   } catch (e) {
     console.error('Failed to load comparison data:', e)
   } finally {
@@ -176,48 +212,31 @@ onMounted(async () => {
   }
 })
 
-function sirColor(sir: string): string {
-  if (sir === 'Resistant') return '#EF4444'
-  if (sir === 'Intermediate') return '#FBBF24'
-  return '#34D399'
-}
-function sirBg(sir: string): string {
-  if (sir === 'Resistant') return 'var(--c-red-dim)'
-  if (sir === 'Intermediate') return 'var(--c-amber-dim)'
-  return 'var(--c-green-dim)'
-}
-
 // ── Helpers ────────────────────────────────────────────────────────
-function filteredSamples(data: SiteData | null, slot: 0 | 1 = 0) {
+function filteredSamples(data: SiteData | null, tripFilter: TripFilter) {
   if (!data) return []
-  const tf = slot === 0 ? tripFilterA.value : tripFilterB.value
-  if (tf === 'all') return data.waterSamples
-  return data.waterSamples.filter((s) => s.tripIdentifier === tf)
+  if (tripFilter === 'all') return data.waterSamples
+  return data.waterSamples.filter((s) => s.tripIdentifier === tripFilter)
 }
 
-function avgWater(data: SiteData | null, key: keyof WaterSample, slot: 0 | 1 = 0) {
-  const vals = filteredSamples(data, slot)
+function avgWater(data: SiteData | null, key: keyof WaterSample, tripFilter: TripFilter) {
+  const vals = filteredSamples(data, tripFilter)
     .map((s) => s[key] as number | null)
     .filter((v) => v !== null) as number[]
   if (!vals.length) return null
   return +(vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2)
 }
 
-// ── Labels — append trip when same site is selected for both slots ──
-const labelA = computed(() => {
-  const name = dataA.value?.site.locationName ?? 'A'
-  if (selectedIds.value[0] === selectedIds.value[1]) {
-    return `${name} \u00b7 ${tripFilterA.value === 'all' ? 'All Trips' : tripFilterA.value}`
+function slotLabel(i: number): string {
+  const data = slotData.value[i]
+  const slot = getSlot(i)
+  const name = data?.site.locationName ?? `Site ${i + 1}`
+  const sameIds = slots.value.filter(s => s.siteId === slot.siteId)
+  if (sameIds.length > 1) {
+    return `${name} · ${slot.tripFilter === 'all' ? 'All Trips' : slot.tripFilter}`
   }
   return name
-})
-const labelB = computed(() => {
-  const name = dataB.value?.site.locationName ?? 'B'
-  if (selectedIds.value[0] === selectedIds.value[1]) {
-    return `${name} \u00b7 ${tripFilterB.value === 'all' ? 'All Trips' : tripFilterB.value}`
-  }
-  return name
-})
+}
 
 function intl1Rate(data: SiteData | null) {
   if (!data || !data.isolates.length) return 0
@@ -240,7 +259,20 @@ function wgsPassRate(data: SiteData | null) {
   ).toFixed(0)
 }
 
-// ── Chart helpers ──────────────────────────────────────────────────
+function sirColor(sir: string): string {
+  if (sir === 'Resistant') return '#EF4444'
+  if (sir === 'Intermediate') return '#FBBF24'
+  return '#34D399'
+}
+function sirBg(sir: string): string {
+  if (sir === 'Resistant') return 'var(--c-red-dim)'
+  if (sir === 'Intermediate') return 'var(--c-amber-dim)'
+  return 'var(--c-green-dim)'
+}
+
+// Computed for the currently active WGS tab data — avoids repeated undefined-unsafe indexing in template
+const activeWgsData = computed((): SiteData | null => slotData.value[activeWgsTab.value] ?? null)
+
 const axLabel = computed(() => ({
   color: isDark.value ? '#5C7A94' : '#9CA3AF',
   fontSize: 11,
@@ -264,29 +296,65 @@ const PARAM_META: Record<string, { label: string; unit: string }> = {
   dissolvedOxygen: { label: 'Dissolved Oxygen', unit: 'mg/L' },
 }
 
-// Overlaid water quality line chart
+// ── Water quality line chart ───────────────────────────────────────
 const waterChartOption = computed(() => {
   const meta = PARAM_META[selWaterParam.value as string]
   if (!meta) return {}
-  const samplesA = filteredSamples(dataA.value, 0)
-  const samplesB = filteredSamples(dataB.value, 1)
+
   const allDates = Array.from(
-    new Set([
-      ...samplesA.map((s) => `${s.tripIdentifier}·${s.collectionDate}`),
-      ...samplesB.map((s) => `${s.tripIdentifier}·${s.collectionDate}`),
-    ]),
+    new Set(
+      slotData.value.flatMap((data, i) =>
+        filteredSamples(data, getSlot(i).tripFilter).map(
+          (s) => `${s.tripIdentifier}·${s.collectionDate}`
+        )
+      )
+    )
   ).sort()
 
-  const getVals = (samples: typeof samplesA) =>
-    allDates.map((d) => {
+  const series = slotData.value.map((data, i) => {
+    const samples = filteredSamples(data, getSlot(i).tripFilter)
+    const vals = allDates.map((d) => {
       const s = samples.find((s) => `${s.tripIdentifier}·${s.collectionDate}` === d)
       return s ? s[selWaterParam.value as keyof WaterSample] : null
     })
+    const color = COLORS[i]
+    // only show area fills for ≤ 2 slots to avoid clutter
+    const showArea = slots.value.length <= 2
+    return {
+      name: slotLabel(i),
+      type: 'line',
+      data: vals,
+      smooth: true,
+      symbol: 'circle',
+      symbolSize: 7,
+      lineStyle: { color, width: 2.5 },
+      itemStyle: {
+        color,
+        borderColor: isDark.value ? '#101D2E' : '#fff',
+        borderWidth: 2,
+      },
+      ...(showArea ? {
+        areaStyle: {
+          color: {
+            type: 'linear', x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: color + '44' },
+              { offset: 1, color: color + '00' },
+            ],
+          },
+        },
+      } : {}),
+    }
+  })
 
   return {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis' },
-    legend: { data: [labelA.value, labelB.value], textStyle: axLabel.value, bottom: 0 },
+    legend: {
+      data: slots.value.map((_, i) => slotLabel(i)),
+      textStyle: axLabel.value,
+      bottom: 0,
+    },
     grid: { left: 52, right: 20, top: 14, bottom: 48 },
     xAxis: {
       type: 'category',
@@ -300,87 +368,39 @@ const waterChartOption = computed(() => {
       splitLine: splitLine.value,
       axisLine: { show: false },
     },
-    series: [
-      {
-        name: labelA.value,
-        type: 'line',
-        data: getVals(samplesA),
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 7,
-        lineStyle: { color: COLORS[0], width: 2.5 },
-        itemStyle: {
-          color: COLORS[0],
-          borderColor: isDark.value ? '#101D2E' : '#fff',
-          borderWidth: 2,
-        },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: COLORS[0] + '44' },
-              { offset: 1, color: COLORS[0] + '00' },
-            ],
-          },
-        },
-      },
-      {
-        name: labelB.value,
-        type: 'line',
-        data: getVals(samplesB),
-        smooth: true,
-        symbol: 'circle',
-        symbolSize: 7,
-        lineStyle: { color: COLORS[1], width: 2.5 },
-        itemStyle: {
-          color: COLORS[1],
-          borderColor: isDark.value ? '#101D2E' : '#fff',
-          borderWidth: 2,
-        },
-        areaStyle: {
-          color: {
-            type: 'linear',
-            x: 0,
-            y: 0,
-            x2: 0,
-            y2: 1,
-            colorStops: [
-              { offset: 0, color: COLORS[1] + '44' },
-              { offset: 1, color: COLORS[1] + '00' },
-            ],
-          },
-        },
-      },
-    ],
+    series,
   }
 })
 
-// AMR class grouped bar
+// ── AMR class grouped bar ──────────────────────────────────────────
 const amrClassOption = computed(() => {
-  const getClassCounts = (data: SiteData | null) => {
-    const map = new Map<string, number>()
-    data?.amrSequences.forEach((s) =>
-      map.set(s.resistanceClass, (map.get(s.resistanceClass) ?? 0) + 1),
-    )
-    return map
-  }
   const allClasses = Array.from(
-    new Set([
-      ...(dataA.value?.amrSequences.map((s) => s.resistanceClass) ?? []),
-      ...(dataB.value?.amrSequences.map((s) => s.resistanceClass) ?? []),
-    ]),
+    new Set(
+      slotData.value.flatMap(d => d?.amrSequences.map(s => s.resistanceClass) ?? [])
+    )
   )
-  const cA = getClassCounts(dataA.value)
-  const cB = getClassCounts(dataB.value)
+
+  const series = slotData.value.map((data, i) => {
+    const map = new Map<string, number>()
+    data?.amrSequences.forEach(s => map.set(s.resistanceClass, (map.get(s.resistanceClass) ?? 0) + 1))
+    return {
+      name: slotLabel(i),
+      type: 'bar',
+      barMaxWidth: 14,
+      barGap: '8%',
+      data: allClasses.map(c => map.get(c) ?? 0),
+      itemStyle: { color: COLORS[i], borderRadius: [0, 3, 3, 0] },
+    }
+  })
 
   return {
     backgroundColor: 'transparent',
     tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-    legend: { data: [labelA.value, labelB.value], textStyle: axLabel.value, bottom: 0 },
+    legend: {
+      data: slots.value.map((_, i) => slotLabel(i)),
+      textStyle: axLabel.value,
+      bottom: 0,
+    },
     grid: { left: 130, right: 16, top: 10, bottom: 48 },
     xAxis: { type: 'value', axisLabel: axLabel.value, splitLine: splitLine.value },
     yAxis: {
@@ -389,45 +409,43 @@ const amrClassOption = computed(() => {
       axisLabel: { ...axLabel.value, fontFamily: 'monospace', fontSize: 10 },
       axisLine: axLine.value,
     },
-    series: [
-      {
-        name: labelA.value,
-        type: 'bar',
-        barMaxWidth: 14,
-        barGap: '8%',
-        data: allClasses.map((c) => cA.get(c) ?? 0),
-        itemStyle: { color: COLORS[0], borderRadius: [0, 3, 3, 0] },
-      },
-      {
-        name: labelB.value,
-        type: 'bar',
-        barMaxWidth: 14,
-        data: allClasses.map((c) => cB.get(c) ?? 0),
-        itemStyle: { color: COLORS[1], borderRadius: [0, 3, 3, 0] },
-      },
-    ],
+    series,
   }
 })
 
-// Radar: 5 AMR/quality dimensions from actual data
-// Axes normalised 0-100. AMR Gene Hits scale adapts to whichever site has more hits.
+// ── Radar chart ────────────────────────────────────────────────────
 const radarOption = computed(() => {
-  const maxAmr = Math.max(
-    dataA.value?.amrSequences.length ?? 0,
-    dataB.value?.amrSequences.length ?? 0,
-    1,
-  )
-  const toScore = (data: SiteData | null, slot: 0 | 1) => [
-    +(((avgWater(data, 'phLevel', slot) ?? 0) / 14) * 100).toFixed(1),
-    +(((avgWater(data, 'dissolvedOxygen', slot) ?? 0) / 15) * 100).toFixed(1),
-    +(((data?.amrSequences.length ?? 0) / maxAmr) * 100).toFixed(1),
-    +intl1Rate(data).toFixed(1),
-    +wgsPassRate(data).toFixed(1),
-  ]
+  const maxAmr = Math.max(...slotData.value.map(d => d?.amrSequences.length ?? 0), 1)
+
+  const seriesData = slotData.value.map((data, i) => {
+    const color = COLORS[i]
+    const tf = getSlot(i).tripFilter
+    const score = [
+      +(((avgWater(data, 'phLevel', tf) ?? 0) / 14) * 100).toFixed(1),
+      +(((avgWater(data, 'dissolvedOxygen', tf) ?? 0) / 15) * 100).toFixed(1),
+      +(((data?.amrSequences.length ?? 0) / maxAmr) * 100).toFixed(1),
+      +intl1Rate(data).toFixed(1),
+      +wgsPassRate(data).toFixed(1),
+    ]
+    // drop area fills at 4+ slots to keep it readable
+    const showArea = slots.value.length <= 3
+    return {
+      name: slotLabel(i),
+      value: score,
+      lineStyle: { color, width: 2 },
+      itemStyle: { color },
+      ...(showArea ? { areaStyle: { color: color + '33' } } : {}),
+    }
+  })
+
   return {
     backgroundColor: 'transparent',
     tooltip: {},
-    legend: { data: [labelA.value, labelB.value], textStyle: axLabel.value, bottom: 0 },
+    legend: {
+      data: slots.value.map((_, i) => slotLabel(i)),
+      textStyle: axLabel.value,
+      bottom: 0,
+    },
     radar: {
       indicator: [
         { name: 'Avg pH', max: 100 },
@@ -441,95 +459,65 @@ const radarOption = computed(() => {
       splitArea: { show: false },
       axisLine: { lineStyle: { color: isDark.value ? 'rgba(255,255,255,0.08)' : '#E5E7EB' } },
     },
-    series: [
-      {
-        type: 'radar',
-        data: [
-          {
-            name: labelA.value,
-            value: toScore(dataA.value, 0),
-            lineStyle: { color: COLORS[0], width: 2 },
-            itemStyle: { color: COLORS[0] },
-            areaStyle: { color: COLORS[0] + '33' },
-          },
-          {
-            name: labelB.value,
-            value: toScore(dataB.value, 1),
-            lineStyle: { color: COLORS[1], width: 2 },
-            itemStyle: { color: COLORS[1] },
-            areaStyle: { color: COLORS[1] + '33' },
-          },
-        ],
-      },
-    ],
+    series: [{ type: 'radar', data: seriesData }],
   }
 })
 
-// Metrics table rows — pulling from all four data sources
+// ── Metrics table ──────────────────────────────────────────────────
 const metricRows = computed(() => [
-  { label: 'River', a: dataA.value?.site.riverName ?? '—', b: dataB.value?.site.riverName ?? '—' },
-  {
-    label: 'Location',
-    a: dataA.value?.site.locationName ?? '—',
-    b: dataB.value?.site.locationName ?? '—',
-  },
+  { label: 'River', values: slotData.value.map(d => d?.site.riverName ?? '—') },
+  { label: 'Location', values: slotData.value.map(d => d?.site.locationName ?? '—') },
   {
     label: 'GPS',
-    a: dataA.value ? `${dataA.value.site.latitude}, ${dataA.value.site.longitude}` : '—',
-    b: dataB.value ? `${dataB.value.site.latitude}, ${dataB.value.site.longitude}` : '—',
+    values: slotData.value.map(d =>
+      d ? `${d.site.latitude}, ${d.site.longitude}` : '—'
+    ),
   },
   {
     label: 'Trip Filter',
-    a: tripFilterA.value === 'all' ? 'All Trips' : tripFilterA.value,
-    b: tripFilterB.value === 'all' ? 'All Trips' : tripFilterB.value,
+    values: slots.value.map((_, i) => getSlot(i).tripFilter === 'all' ? 'All Trips' : getSlot(i).tripFilter),
   },
   {
     label: 'Water Samples',
-    a: filteredSamples(dataA.value, 0).length,
-    b: filteredSamples(dataB.value, 1).length,
+    values: slotData.value.map((d, i) => filteredSamples(d, getSlot(i).tripFilter).length),
   },
-  {
-    label: 'Isolates',
-    a: dataA.value?.isolates.length ?? '—',
-    b: dataB.value?.isolates.length ?? '—',
-  },
+  { label: 'Isolates', values: slotData.value.map(d => d?.isolates.length ?? '—') },
   {
     label: 'Avg pH',
-    a: avgWater(dataA.value, 'phLevel', 0) ?? '—',
-    b: avgWater(dataB.value, 'phLevel', 1) ?? '—',
+    values: slotData.value.map((d, i) => avgWater(d, 'phLevel', getSlot(i).tripFilter) ?? '—'),
   },
   {
     label: 'Avg Temp (°C)',
-    a: avgWater(dataA.value, 'waterTemperature', 0) ?? '—',
-    b: avgWater(dataB.value, 'waterTemperature', 1) ?? '—',
+    values: slotData.value.map((d, i) => avgWater(d, 'waterTemperature', getSlot(i).tripFilter) ?? '—'),
   },
   {
     label: 'Avg TDS (mg/L)',
-    a: avgWater(dataA.value, 'tds', 0) ?? '—',
-    b: avgWater(dataB.value, 'tds', 1) ?? '—',
+    values: slotData.value.map((d, i) => avgWater(d, 'tds', getSlot(i).tripFilter) ?? '—'),
   },
   {
     label: 'Avg EC (μS/cm)',
-    a: avgWater(dataA.value, 'ec', 0) ?? '—',
-    b: avgWater(dataB.value, 'ec', 1) ?? '—',
+    values: slotData.value.map((d, i) => avgWater(d, 'ec', getSlot(i).tripFilter) ?? '—'),
   },
   {
     label: 'Avg DO (mg/L)',
-    a: avgWater(dataA.value, 'dissolvedOxygen', 0) ?? '—',
-    b: avgWater(dataB.value, 'dissolvedOxygen', 1) ?? '—',
+    values: slotData.value.map((d, i) => avgWater(d, 'dissolvedOxygen', getSlot(i).tripFilter) ?? '—'),
   },
   {
     label: 'IntI1 Positive Rate',
-    a: intl1Rate(dataA.value) + '%',
-    b: intl1Rate(dataB.value) + '%',
+    values: slotData.value.map(d => intl1Rate(d) + '%'),
   },
   {
     label: 'AMR Gene Hits',
-    a: dataA.value?.amrSequences.length ?? '—',
-    b: dataB.value?.amrSequences.length ?? '—',
+    values: slotData.value.map(d => d?.amrSequences.length ?? '—'),
   },
-  { label: 'WGS Passed QC', a: wgsPassRate(dataA.value) + '%', b: wgsPassRate(dataB.value) + '%' },
-  { label: 'Resistant Isolates', a: resistantCount(dataA.value), b: resistantCount(dataB.value) },
+  {
+    label: 'WGS Passed QC',
+    values: slotData.value.map(d => wgsPassRate(d) + '%'),
+  },
+  {
+    label: 'Resistant Isolates',
+    values: slotData.value.map(d => resistantCount(d)),
+  },
 ])
 </script>
 
@@ -548,119 +536,96 @@ const metricRows = computed(() => [
       </p>
     </header>
 
-    <!-- ── Hero slot cards (picker + stats unified) ── -->
-    <div class="hero-row">
-      <!-- Slot A -->
-      <div class="hero-card" :style="{ borderTopColor: COLORS[0] }">
-        <div class="hero-picker-area">
-          <span class="hero-slot-label" :style="{ color: COLORS[0] }">
-            <i class="pi pi-map-marker"></i> Site A
-          </span>
-          <select v-model="selectedIds[0]" class="hero-select" :style="{ '--accent': COLORS[0] }">
-            <option v-for="s in ALL_SITES" :key="s.site.siteId" :value="s.site.siteId">
-              {{ s.site.siteId }} — {{ s.site.locationName }}
-            </option>
-          </select>
-          <div class="hero-meta" v-if="dataA">
-            {{ dataA.site.riverName }} · {{ dataA.site.latitude }}, {{ dataA.site.longitude }}
+    <!-- ── Slot cards ── -->
+    <div class="slots-section">
+      <div class="slots-row">
+        <div
+          v-for="(slot, i) in slots"
+          :key="i"
+          class="hero-card"
+          :style="{ borderTopColor: COLORS[i] }"
+        >
+          <!-- Remove button — only show when more than 2 slots -->
+          <button
+            v-if="slots.length > 2"
+            class="slot-remove"
+            :style="{ color: COLORS[i] }"
+            @click="removeSlot(i)"
+            title="Remove this site"
+          >
+            <i class="pi pi-times"></i>
+          </button>
+
+          <div class="hero-picker-area">
+            <span class="hero-slot-label" :style="{ color: COLORS[i] }">
+              <i class="pi pi-map-marker"></i> Site {{ String.fromCharCode(65 + i) }}
+            </span>
+            <select v-model="slot.siteId" class="hero-select">
+              <option value="" disabled>Select a site…</option>
+              <option v-for="s in ALL_SITES" :key="s.site.siteId" :value="s.site.siteId">
+                {{ s.site.siteId }} — {{ s.site.locationName }}
+              </option>
+            </select>
+            <div class="hero-meta" v-if="slotData[i]">
+              {{ slotData[i]!.site.riverName }} · {{ slotData[i]!.site.latitude }},
+              {{ slotData[i]!.site.longitude }}
+            </div>
+            <div class="hero-trip-row">
+              <span class="hero-trip-label">Trip</span>
+              <div class="trip-tabs">
+                <button
+                  v-for="t in TRIP_OPTIONS"
+                  :key="t"
+                  class="trip-tab"
+                  :class="{ 'trip-tab--active': slot.tripFilter === t }"
+                  :style="slot.tripFilter === t ? { borderColor: COLORS[i], color: COLORS[i] } : {}"
+                  @click="slot.tripFilter = t"
+                >
+                  {{ t === 'all' ? 'All' : t }}
+                </button>
+              </div>
+            </div>
           </div>
-          <div class="hero-trip-row">
-            <span class="hero-trip-label">Trip</span>
-            <div class="trip-tabs">
-              <button
-                v-for="t in ['all', 'Trip 1', 'Trip 2'] as const"
-                :key="t"
-                class="trip-tab"
-                :class="{ 'trip-tab--active': tripFilterA === t }"
-                :style="tripFilterA === t ? { borderColor: COLORS[0], color: COLORS[0] } : {}"
-                @click="tripFilterA = t"
-              >
-                {{ t === 'all' ? 'All' : t }}
-              </button>
+
+          <div class="hero-divider"></div>
+
+          <div class="mini-stats" v-if="slotData[i]">
+            <div class="mini-stat">
+              <span class="mini-label">Samples</span>
+              <span class="mini-val" :style="{ color: COLORS[i] }">
+                {{ filteredSamples(slotData[i], slot.tripFilter).length }}
+              </span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">Isolates</span>
+              <span class="mini-val" :style="{ color: COLORS[i] }">
+                {{ slotData[i]!.isolates.length }}
+              </span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">AMR Hits</span>
+              <span class="mini-val" :style="{ color: COLORS[i] }">
+                {{ slotData[i]!.amrSequences.length }}
+              </span>
+            </div>
+            <div class="mini-stat">
+              <span class="mini-label">WGS Pass</span>
+              <span class="mini-val" :style="{ color: COLORS[i] }">
+                {{ wgsPassRate(slotData[i]) }}%
+              </span>
             </div>
           </div>
         </div>
-        <div class="hero-divider"></div>
-        <div class="mini-stats" v-if="dataA">
-          <div class="mini-stat">
-            <span class="mini-label">Samples</span>
-            <span class="mini-val" :style="{ color: COLORS[0] }">{{
-              filteredSamples(dataA, 0).length
-            }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">Isolates</span>
-            <span class="mini-val" :style="{ color: COLORS[0] }">{{ dataA.isolates.length }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">AMR Hits</span>
-            <span class="mini-val" :style="{ color: COLORS[0] }">{{
-              dataA.amrSequences.length
-            }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">WGS Pass</span>
-            <span class="mini-val" :style="{ color: COLORS[0] }">{{ wgsPassRate(dataA) }}%</span>
-          </div>
-        </div>
-      </div>
 
-      <!-- VS badge -->
-      <div class="vs-badge">VS</div>
-
-      <!-- Slot B -->
-      <div class="hero-card" :style="{ borderTopColor: COLORS[1] }">
-        <div class="hero-picker-area">
-          <span class="hero-slot-label" :style="{ color: COLORS[1] }">
-            <i class="pi pi-map-marker"></i> Site B
-          </span>
-          <select v-model="selectedIds[1]" class="hero-select">
-            <option v-for="s in ALL_SITES" :key="s.site.siteId" :value="s.site.siteId">
-              {{ s.site.siteId }} — {{ s.site.locationName }}
-            </option>
-          </select>
-          <div class="hero-meta" v-if="dataB">
-            {{ dataB.site.riverName }} · {{ dataB.site.latitude }}, {{ dataB.site.longitude }}
-          </div>
-          <div class="hero-trip-row">
-            <span class="hero-trip-label">Trip</span>
-            <div class="trip-tabs">
-              <button
-                v-for="t in ['all', 'Trip 1', 'Trip 2'] as const"
-                :key="t"
-                class="trip-tab"
-                :class="{ 'trip-tab--active': tripFilterB === t }"
-                :style="tripFilterB === t ? { borderColor: COLORS[1], color: COLORS[1] } : {}"
-                @click="tripFilterB = t"
-              >
-                {{ t === 'all' ? 'All' : t }}
-              </button>
-            </div>
-          </div>
-        </div>
-        <div class="hero-divider"></div>
-        <div class="mini-stats" v-if="dataB">
-          <div class="mini-stat">
-            <span class="mini-label">Samples</span>
-            <span class="mini-val" :style="{ color: COLORS[1] }">{{
-              filteredSamples(dataB, 1).length
-            }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">Isolates</span>
-            <span class="mini-val" :style="{ color: COLORS[1] }">{{ dataB.isolates.length }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">AMR Hits</span>
-            <span class="mini-val" :style="{ color: COLORS[1] }">{{
-              dataB.amrSequences.length
-            }}</span>
-          </div>
-          <div class="mini-stat">
-            <span class="mini-label">WGS Pass</span>
-            <span class="mini-val" :style="{ color: COLORS[1] }">{{ wgsPassRate(dataB) }}%</span>
-          </div>
-        </div>
+        <!-- Add site button -->
+        <button
+          v-if="slots.length < MAX_SLOTS"
+          class="add-slot-btn"
+          @click="addSlot"
+        >
+          <i class="pi pi-plus"></i>
+          <span>Add Site</span>
+        </button>
       </div>
     </div>
 
@@ -668,30 +633,30 @@ const metricRows = computed(() => [
     <section class="chart-section">
       <div class="section-header">
         <h2 class="section-title"><i class="pi pi-list"></i> Head-to-Head Metrics</h2>
-        <span class="section-note"
-          >All four data sources · Epicollect, Binary Info, AMRFinderPlus, StarAMR</span
-        >
+        <span class="section-note">All four data sources · Epicollect, Binary Info, AMRFinderPlus, StarAMR</span>
       </div>
       <div class="table-card">
         <table class="compare-table">
           <thead>
             <tr>
               <th class="metric-col">Metric</th>
-              <th :style="{ color: COLORS[0] }">
-                <span class="th-dot" :style="{ background: COLORS[0] }"></span
-                >{{ dataA?.site.locationName }}
-              </th>
-              <th :style="{ color: COLORS[1] }">
-                <span class="th-dot" :style="{ background: COLORS[1] }"></span
-                >{{ dataB?.site.locationName }}
+              <th v-for="(_, i) in slots" :key="i" :style="{ color: COLORS[i] }">
+                <span class="th-dot" :style="{ background: COLORS[i] }"></span>
+                {{ slotData[i]?.site.locationName ?? `Site ${String.fromCharCode(65 + i)}` }}
               </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in metricRows" :key="row.label">
               <td class="metric-name">{{ row.label }}</td>
-              <td class="metric-val" :style="{ color: COLORS[0] }">{{ row.a }}</td>
-              <td class="metric-val" :style="{ color: COLORS[1] }">{{ row.b }}</td>
+              <td
+                v-for="(val, i) in row.values"
+                :key="i"
+                class="metric-val"
+                :style="{ color: COLORS[i] }"
+              >
+                {{ val }}
+              </td>
             </tr>
           </tbody>
         </table>
@@ -741,95 +706,103 @@ const metricRows = computed(() => [
       </section>
     </div>
 
-    <!-- ── WGS side-by-side tables ── -->
+    <!-- ── WGS tabbed table ── -->
     <section class="chart-section">
       <div class="section-header">
         <h2 class="section-title"><i class="pi pi-dna"></i> WGS Metrics Comparison</h2>
         <span class="section-note">StarAMR · quality, genotype, SIR profile, plasmid</span>
       </div>
-      <div class="wgs-cols">
-        <template v-for="(data, idx) in [dataA, dataB]" :key="idx">
-          <div class="wgs-col" v-if="data">
-            <div
-              class="wgs-col-header"
-              :style="{ borderBottomColor: COLORS[idx], color: COLORS[idx] }"
-            >
-              {{ data.site.locationName }}
-            </div>
-            <div class="table-card" style="border-radius: 0 0 8px 8px; border-top: none">
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Isolate</th>
-                    <th>QC</th>
-                    <th>Predicted Phenotype</th>
-                    <th>SIR</th>
-                    <th>Plasmid</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-if="!wgsPaged(data, idx as 0 | 1).rows.length">
-                    <td colspan="5" class="dim" style="text-align: center; padding: 16px">
-                      No WGS records.
-                    </td>
-                  </tr>
-                  <tr v-for="wgs in wgsPaged(data, idx as 0 | 1).rows" :key="wgs.isolateId">
-                    <td class="mono dim">{{ wgs.isolateId }}</td>
-                    <td>
-                      <span
-                        class="quality-badge"
-                        :class="wgs.qualityStatus === 'Passed' ? 'quality--pass' : 'quality--fail'"
-                        >{{ wgs.qualityStatus }}</span
-                      >
-                    </td>
-                    <td class="dim phenotype-cell" :title="wgs.predictedPhenotype">
-                      {{ wgs.predictedPhenotype || '—' }}
-                    </td>
-                    <td>
-                      <span
-                        class="sir-badge"
-                        :style="{
-                          color: sirColor(wgs.sirProfile),
-                          background: sirBg(wgs.sirProfile),
-                        }"
-                        >{{ wgs.sirProfile }}</span
-                      >
-                    </td>
-                    <td class="mono dim plasmid-cell" :title="wgs.plasmid">{{ wgs.plasmid || '—' }}</td>
-                  </tr>
-                </tbody>
-              </table>
-              <div
-                v-if="wgsPaged(data, idx as 0 | 1).total > 0"
-                class="wgs-pagination"
+
+      <!-- Tab row — one tab per slot -->
+      <div class="wgs-tabs">
+        <button
+          v-for="(_, i) in slots"
+          :key="i"
+          class="wgs-tab"
+          :class="{ 'wgs-tab--active': activeWgsTab === i }"
+          :style="activeWgsTab === i
+            ? { borderColor: COLORS[i], color: COLORS[i], background: COLORS[i] + '18' }
+            : {}"
+          @click="activeWgsTab = i"
+        >
+          <span class="wgs-tab-dot" :style="{ background: COLORS[i] }"></span>
+          {{ slotData[i]?.site.locationName ?? `Site ${String.fromCharCode(65 + i)}` }}
+        </button>
+      </div>
+
+      <!-- Table for the active tab -->
+      <div class="table-card" style="border-radius: 0 0 8px 8px; border-top: none">
+        <template v-if="activeWgsData">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Isolate</th>
+                <th>QC</th>
+                <th>Predicted Phenotype</th>
+                <th>SIR</th>
+                <th>Plasmid</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-if="!wgsPaged(activeWgsData, activeWgsTab).rows.length">
+                <td colspan="5" class="dim" style="text-align: center; padding: 16px">
+                  No WGS records.
+                </td>
+              </tr>
+              <tr
+                v-for="wgs in wgsPaged(activeWgsData, activeWgsTab).rows"
+                :key="wgs.isolateId"
               >
-                <span class="wgs-pagination-info">
-                  Page {{ wgsPaged(data, idx as 0 | 1).page }} of
-                  {{ wgsPaged(data, idx as 0 | 1).totalPages }} ·
-                  {{ wgsPaged(data, idx as 0 | 1).total }} total
-                </span>
-                <div class="wgs-pagination-buttons">
-                  <button
-                    class="page-btn"
-                    :disabled="wgsPaged(data, idx as 0 | 1).page <= 1"
-                    @click="setWgsPage(idx as 0 | 1, wgsPaged(data, idx as 0 | 1).page - 1)"
-                  >
-                    <i class="pi pi-chevron-left"></i> Prev
-                  </button>
-                  <button
-                    class="page-btn"
-                    :disabled="
-                      wgsPaged(data, idx as 0 | 1).page >= wgsPaged(data, idx as 0 | 1).totalPages
-                    "
-                    @click="setWgsPage(idx as 0 | 1, wgsPaged(data, idx as 0 | 1).page + 1)"
-                  >
-                    Next <i class="pi pi-chevron-right"></i>
-                  </button>
-                </div>
-              </div>
+                <td class="mono dim">{{ wgs.isolateId }}</td>
+                <td>
+                  <span
+                    class="quality-badge"
+                    :class="wgs.qualityStatus === 'Passed' ? 'quality--pass' : 'quality--fail'"
+                  >{{ wgs.qualityStatus }}</span>
+                </td>
+                <td class="dim phenotype-cell" :title="wgs.predictedPhenotype">
+                  {{ wgs.predictedPhenotype || '—' }}
+                </td>
+                <td>
+                  <span
+                    class="sir-badge"
+                    :style="{ color: sirColor(wgs.sirProfile), background: sirBg(wgs.sirProfile) }"
+                  >{{ wgs.sirProfile }}</span>
+                </td>
+                <td class="mono dim plasmid-cell" :title="wgs.plasmid">{{ wgs.plasmid || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+          <div
+            v-if="wgsPaged(activeWgsData, activeWgsTab).total > 0"
+            class="wgs-pagination"
+          >
+            <span class="wgs-pagination-info">
+              Page {{ wgsPaged(activeWgsData, activeWgsTab).page }} of
+              {{ wgsPaged(activeWgsData, activeWgsTab).totalPages }} ·
+              {{ wgsPaged(activeWgsData, activeWgsTab).total }} total
+            </span>
+            <div class="wgs-pagination-buttons">
+              <button
+                class="page-btn"
+                :disabled="wgsPaged(activeWgsData, activeWgsTab).page <= 1"
+                @click="setWgsPage(activeWgsTab, wgsPaged(activeWgsData, activeWgsTab).page - 1)"
+              >
+                <i class="pi pi-chevron-left"></i> Prev
+              </button>
+              <button
+                class="page-btn"
+                :disabled="wgsPaged(activeWgsData, activeWgsTab).page >= wgsPaged(activeWgsData, activeWgsTab).totalPages"
+                @click="setWgsPage(activeWgsTab, wgsPaged(activeWgsData, activeWgsTab).page + 1)"
+              >
+                Next <i class="pi pi-chevron-right"></i>
+              </button>
             </div>
           </div>
         </template>
+        <div v-else class="dim" style="text-align: center; padding: 24px">
+          No site selected for this slot.
+        </div>
       </div>
     </section>
   </div>
@@ -876,33 +849,52 @@ const metricRows = computed(() => [
   margin: 0;
 }
 
-/* Hero slot cards */
-.hero-row {
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 0;
+/* ── Slots row ── */
+.slots-section {
   margin-bottom: 24px;
 }
-@media (max-width: 700px) {
-  .hero-row {
-    grid-template-columns: 1fr;
-  }
+.slots-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .hero-card {
+  position: relative;
   background: var(--c-card);
   border: 1px solid var(--c-border);
   border-top: 3px solid transparent;
   border-radius: 10px;
   overflow: hidden;
   box-shadow: var(--c-shadow);
+  /* each card takes equal space, min 220px, max ~340px */
+  flex: 1 1 220px;
+  max-width: 340px;
+}
+
+.slot-remove {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 11px;
+  opacity: 0.6;
+  transition: opacity 0.15s;
+  padding: 2px 4px;
+  border-radius: 4px;
+  z-index: 1;
+}
+.slot-remove:hover {
+  opacity: 1;
+  background: var(--c-brand-dim);
 }
 
 .hero-picker-area {
   padding: 20px 22px 16px;
 }
-
 .hero-slot-label {
   font-size: 10.5px;
   font-weight: 700;
@@ -913,7 +905,6 @@ const metricRows = computed(() => [
   gap: 5px;
   margin-bottom: 10px;
 }
-
 .hero-select {
   width: 100%;
   background: var(--c-bg);
@@ -921,7 +912,7 @@ const metricRows = computed(() => [
   border-radius: 7px;
   color: var(--c-heading);
   font-family: 'Inter', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   padding: 9px 12px;
   cursor: pointer;
@@ -932,13 +923,11 @@ const metricRows = computed(() => [
 .hero-select:focus {
   border-color: var(--c-brand);
 }
-
 .hero-meta {
   font-size: 11px;
   color: var(--c-text-muted);
   margin-bottom: 12px;
 }
-
 .hero-trip-row {
   display: flex;
   align-items: center;
@@ -952,23 +941,41 @@ const metricRows = computed(() => [
   color: var(--c-text-muted);
   white-space: nowrap;
 }
-
 .hero-divider {
   height: 1px;
   background: var(--c-border);
-  margin: 0;
 }
 
-.vs-badge {
-  font-family: 'Inter', sans-serif;
-  font-size: 15px;
-  font-weight: 700;
+/* Add site button */
+.add-slot-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex: 0 0 auto;
+  width: 80px;
+  min-height: 160px;
+  background: transparent;
+  border: 2px dashed var(--c-border);
+  border-radius: 10px;
   color: var(--c-text-muted);
-  text-align: center;
-  padding: 0 18px;
+  font-size: 11px;
+  font-family: 'DM Sans', sans-serif;
+  cursor: pointer;
+  transition: all 0.15s;
+  align-self: stretch;
+}
+.add-slot-btn:hover {
+  border-color: var(--c-brand);
+  color: var(--c-brand);
+  background: var(--c-brand-dim);
+}
+.add-slot-btn .pi {
+  font-size: 18px;
 }
 
-/* Shared trip tabs (used in hero cards) */
+/* Trip tabs */
 .trip-tabs {
   display: flex;
   gap: 5px;
@@ -993,7 +1000,7 @@ const metricRows = computed(() => [
   background: var(--c-brand-dim);
 }
 
-/* Mini stats (shared) */
+/* Mini stats */
 .mini-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -1016,24 +1023,6 @@ const metricRows = computed(() => [
   font-weight: 700;
   font-family: 'Inter', sans-serif;
   line-height: 1.1;
-}
-
-/* (keep old col-* classes for any remaining usage) */
-.col-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.col-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--c-heading);
-}
-.col-sub {
-  font-size: 10.5px;
-  color: var(--c-text-muted);
-  margin-top: 2px;
 }
 
 /* Sections */
@@ -1113,31 +1102,45 @@ const metricRows = computed(() => [
   }
 }
 
-/* WGS side by side */
-.wgs-cols {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-}
-@media (max-width: 900px) {
-  .wgs-cols {
-    grid-template-columns: 1fr;
-  }
-}
-.wgs-col {
+/* WGS tabs */
+.wgs-tabs {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  gap: 0;
+  border-bottom: none;
 }
-.wgs-col-header {
+.wgs-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 16px;
   font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  padding: 9px 14px;
+  font-weight: 600;
+  font-family: 'DM Sans', sans-serif;
   background: var(--c-card);
   border: 1px solid var(--c-border);
+  border-bottom: none;
   border-radius: 8px 8px 0 0;
-  border-bottom-width: 2px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-right: 4px;
+}
+.wgs-tab:hover {
+  color: var(--c-text);
+  background: var(--c-brand-dim);
+}
+.wgs-tab--active {
+  font-weight: 700;
+  border-bottom: 2px solid transparent;
+  position: relative;
+  z-index: 1;
+}
+.wgs-tab-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 /* Tables */
@@ -1257,7 +1260,6 @@ const metricRows = computed(() => [
   font-size: 10.5px;
   font-weight: 600;
 }
-
 .phenotype-cell {
   font-size: 11px;
   max-width: 180px;
@@ -1314,5 +1316,19 @@ const metricRows = computed(() => [
 }
 .page-btn .pi {
   font-size: 9px;
+}
+
+@media (max-width: 700px) {
+  .slots-row {
+    flex-direction: column;
+  }
+  .hero-card {
+    max-width: 100%;
+  }
+  .add-slot-btn {
+    width: 100%;
+    min-height: 56px;
+    flex-direction: row;
+  }
 }
 </style>
