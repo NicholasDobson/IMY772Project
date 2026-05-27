@@ -14,6 +14,8 @@ import za.co.tuks.amrdashboard.backend.service.DocumentProcessingService;
 import za.co.tuks.amrdashboard.backend.service.MinioService;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -45,12 +47,56 @@ public class KnowledgeController {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().body(Map.of("error", "No file provided"));
         }
-
-        String contentType = file.getContentType();
-        if (contentType == null || !contentType.equals("application/pdf")) {
+        if (!isPdf(file)) {
             return ResponseEntity.badRequest().body(Map.of("error", "Only PDF files are accepted"));
         }
 
+        try {
+            return ResponseEntity.accepted().body(toDTO(storeAndProcess(file, title)));
+        } catch (Exception e) {
+            log.error("Document upload failed", e);
+            return ResponseEntity.internalServerError().body(Map.of("error", "Upload failed: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping("/batch")
+    public ResponseEntity<Object> uploadBatch(@RequestParam("files") MultipartFile[] files) {
+        if (files == null || files.length == 0) {
+            return ResponseEntity.badRequest().body(Map.of("error", "No files provided"));
+        }
+
+        List<KnowledgeDocumentDTO> accepted = new ArrayList<>();
+        List<Map<String, String>> rejected = new ArrayList<>();
+
+        for (MultipartFile file : files) {
+            if (file.isEmpty() || !isPdf(file)) {
+                rejected.add(Map.of(
+                    "filename", file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown",
+                    "error", file.isEmpty() ? "Empty file" : "Not a PDF"));
+                continue;
+            }
+            try {
+                accepted.add(toDTO(storeAndProcess(file, null)));
+            } catch (Exception e) {
+                log.error("Batch upload failed for {}", file.getOriginalFilename(), e);
+                rejected.add(Map.of(
+                    "filename", file.getOriginalFilename() != null ? file.getOriginalFilename() : "unknown",
+                    "error", e.getMessage()));
+            }
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("accepted", accepted);
+        result.put("rejected", rejected);
+        return ResponseEntity.accepted().body(result);
+    }
+
+    private boolean isPdf(MultipartFile file) {
+        String contentType = file.getContentType();
+        return contentType != null && contentType.equals("application/pdf");
+    }
+
+    private KnowledgeDocument storeAndProcess(MultipartFile file, String title) throws Exception {
         String originalFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "document.pdf";
         if (title == null || title.isBlank()) {
             title = originalFilename.replaceAll("\\.pdf$", "");
@@ -60,25 +106,19 @@ public class KnowledgeController {
         doc.setTitle(title);
         doc.setOriginalFilename(originalFilename);
         doc.setFileSizeBytes(file.getSize());
-        doc.setContentType(contentType);
+        doc.setContentType(file.getContentType());
         doc.setStatus(DocumentStatus.UPLOADING);
         doc.setUploadedAt(LocalDateTime.now());
 
         String objectKey = "documents/" + UUID.randomUUID() + "/" + originalFilename;
         doc.setMinioObjectKey(objectKey);
 
-        try {
-            minioService.upload(objectKey, file.getInputStream(), file.getSize(), contentType);
-            doc.setStatus(DocumentStatus.PROCESSING);
-            documentRepository.save(doc);
+        minioService.upload(objectKey, file.getInputStream(), file.getSize(), file.getContentType());
+        doc.setStatus(DocumentStatus.PROCESSING);
+        documentRepository.save(doc);
 
-            processingService.processDocument(doc.getDocumentId());
-
-            return ResponseEntity.accepted().body(toDTO(doc));
-        } catch (Exception e) {
-            log.error("Document upload failed", e);
-            return ResponseEntity.internalServerError().body(Map.of("error", "Upload failed: " + e.getMessage()));
-        }
+        processingService.processDocument(doc.getDocumentId());
+        return doc;
     }
 
     @DeleteMapping("/{documentId}")
