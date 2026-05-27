@@ -514,8 +514,8 @@ function createPinIcon(color: string): L.Icon {
   const icon = L.divIcon({
     className: 'map-color-pin',
     html: `<div class="pin-dot" style="background-color:${color}"></div>`,
-    iconSize: [18, 18],
-    iconAnchor: [9, 9],
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
   });
   iconCache.set(color, icon);
   return icon as L.Icon;
@@ -538,8 +538,8 @@ function createOverlapIcon(colors: string[]): L.Icon {
   const icon = L.divIcon({
     className: 'map-color-pin',
     html: `<div class="pin-dot pin-dot--overlap" style="background:conic-gradient(${stops})"></div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
   });
   iconCache.set(key, icon);
   return icon as L.Icon;
@@ -1824,15 +1824,15 @@ function formatPhDo(summary: SiteSummary) {
 }
 
 .map-color-pin .pin-dot {
-  width: 14px;
-  height: 14px;
+  width: 18px;
+  height: 18px;
   border-radius: 50%;
   border: 2px solid #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .map-color-pin .pin-dot--overlap {
-  width: 16px;
-  height: 16px;
+  width: 22px;
+  height: 22px;
 }
 </style>
