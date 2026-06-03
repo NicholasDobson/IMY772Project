@@ -1,5 +1,6 @@
-# 🌱 AMRWatch
-**IMY 772 – Web Information Systems Project (2026)**
+<div align="center">
+  <img src="AMR_Image.png" alt="AMR Watch" width="100%"/>
+</div>
 
 Client: Department of Plant and Soil Sciences  
 Institution: University of Pretoria  
