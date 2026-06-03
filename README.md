@@ -1,25 +1,23 @@
 <div align="center">
   <img src="AMR_Image.png" alt="AMR Watch" width="100%"/>
 </div>
----
+
 <div align="center">
-Client: Department of Plant and Soil Sciences  
-Institution: University of Pretoria  
-Deployment Platform: Amazon Web Services (AWS)  
+  Client: Department of Plant and Soil Sciences\
+  Institution: University of Pretoria\
+  Deployment Platform: Amazon Web Services (AWS)  
 </div> 
----
-<div align="center">
+
+
 ## Project Description
-</div>
 
 Smart AgriCloud is a cloud-based **Progressive Web Application (PWA)** designed to support agricultural research through **real-time environmental data processing**, **image-based plant health analysis**, and **secure, scalable cloud infrastructure**.
 
 The system enables researchers and students to monitor soil and crop conditions, upload and analyse plant images using machine learning techniques, and access historical research data from any device.
 
 ---
-<div align="center">
+
 ## Problem Statement
-</div>
 
 Current agricultural research processes rely on fragmented tools for data collection, manual analysis of plant images, and limited real-time insight. These limitations reduce research efficiency and data accessibility.
 
