@@ -3,10 +3,10 @@
 </div>
 
 <div align="center">
-  Client: Department of Plant and Soil Sciences\
-  Institution: University of Pretoria\
-  Deployment Platform: Amazon Web Services (AWS)  
-</div> 
+  Client: Department of Plant and Soil Sciences<br>
+  Institution: University of Pretoria<br>
+  Deployment Platform: Amazon Web Services (AWS)
+</div>
 
 
 ## Project Description
