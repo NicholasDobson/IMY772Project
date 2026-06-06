@@ -114,4 +114,74 @@ class AnalyticsControllerTest {
                 .andExpect(jsonPath("$.provinces[0].name").value("Gauteng"))
                 .andExpect(jsonPath("$.provinces[0].riskLevel").value("HIGH"));
     }
+
+    @Test
+    void shouldReturnMonthlyTrendForYear() throws Exception {
+        when(analyticsService.getMonthlyTrend(2025)).thenReturn(Map.of(
+                "year", 2025,
+                "months", List.of(Map.of("month", 1, "count", 5L))
+        ));
+
+        mockMvc.perform(get("/api/v1/analytics/dashboard/monthly-trend").param("year", "2025"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.year").value(2025))
+                .andExpect(jsonPath("$.months[0].count").value(5));
+    }
+
+    @Test
+    void shouldReturnAvailableYears() throws Exception {
+        when(analyticsService.getAvailableYears()).thenReturn(Map.of(
+                "years", List.of(2023, 2024, 2025)
+        ));
+
+        mockMvc.perform(get("/api/v1/analytics/dashboard/monthly-trend/available-years"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.years[0]").value(2023))
+                .andExpect(jsonPath("$.years[2]").value(2025));
+    }
+
+    @Test
+    void shouldReturnBestYear() throws Exception {
+        when(analyticsService.getMonthlyTrendBestYear()).thenReturn(Map.of(
+                "bestYear", 2024,
+                "totalCases", 148L
+        ));
+
+        mockMvc.perform(get("/api/v1/analytics/dashboard/monthly-trend/best-year"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bestYear").value(2024))
+                .andExpect(jsonPath("$.totalCases").value(148));
+    }
+
+    @Test
+    void shouldReturnTopResistanceGenes() throws Exception {
+        when(analyticsService.getTopResistanceGenes(8)).thenReturn(Map.of(
+                "genes", List.of(Map.of(
+                        "geneSymbol", "blaTEM",
+                        "detectionCount", 34L,
+                        "resistanceClass", "Beta-lactam"
+                ))
+        ));
+
+        mockMvc.perform(get("/api/v1/analytics/dashboard/top-resistance-genes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.genes[0].geneSymbol").value("blaTEM"))
+                .andExpect(jsonPath("$.genes[0].resistanceClass").value("Beta-lactam"));
+    }
+
+    @Test
+    void shouldReturnAffectedRiverSites() throws Exception {
+        when(analyticsService.getAffectedRiverSites(6)).thenReturn(Map.of(
+                "sites", List.of(Map.of(
+                        "riverName", "Apies River",
+                        "siteCount", 4L,
+                        "resistantCount", 22L
+                ))
+        ));
+
+        mockMvc.perform(get("/api/v1/analytics/dashboard/affected-river-sites"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.sites[0].riverName").value("Apies River"))
+                .andExpect(jsonPath("$.sites[0].resistantCount").value(22));
+    }
 }
