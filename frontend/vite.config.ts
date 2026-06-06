@@ -8,7 +8,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 export default defineConfig({
   plugins: [
     vue(),
-    vueDevTools(),
+    // vueDevTools spawns processes and binds ports — exclude it during Vitest runs
+    ...(process.env.VITEST ? [] : [vueDevTools()]),
   ],
   resolve: {
     alias: {
