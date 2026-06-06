@@ -11,7 +11,6 @@ import za.co.tuks.amrdashboard.backend.model.Blog;
 import za.co.tuks.amrdashboard.backend.service.BlogService;
 import za.co.tuks.amrdashboard.backend.service.FileStorageService;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,7 +40,6 @@ class BlogControllerTest {
         blog.setTitle(title);
         blog.setAuthor("Test Author");
         blog.setContent("Test content body");
-        blog.setDatePublished(LocalDateTime.of(2025, 5, 10, 9, 0));
         return blog;
     }
 
