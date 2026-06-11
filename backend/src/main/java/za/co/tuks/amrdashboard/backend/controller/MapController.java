@@ -18,15 +18,16 @@ public class MapController {
 
     private final MapService mapService;
 
-    // 1. Get markers with optional filters
-    // Example: GET /api/v1/map/markers?organism=Klebsiella pneumoniae&sirProfile=Resistant
+    // 1. Get markers with optional filters (repeat params for multi-select)
+    // Example: GET /api/v1/map/markers?organism=E.%20coli&organism=K.%20pneumoniae&sirProfile=Resistant
     @GetMapping("/markers")
     public ResponseEntity<List<SiteMarkerDTO>> getMarkers(
-            @RequestParam(required = false) String riverName,
-            @RequestParam(required = false) String organism,
-            @RequestParam(required = false) String sirProfile) {
-        
-        return ResponseEntity.ok(mapService.getFilteredMarkers(riverName, organism, sirProfile));
+            @RequestParam(required = false) List<String> riverName,
+            @RequestParam(required = false) List<String> organism,
+            @RequestParam(required = false) List<String> sirProfile,
+            @RequestParam(required = false) List<String> trip) {
+
+        return ResponseEntity.ok(mapService.getFilteredMarkers(riverName, organism, sirProfile, trip));
     }
 
     // 2. Get dynamic options for the frontend dropdown menus

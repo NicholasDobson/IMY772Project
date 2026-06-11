@@ -1,11 +1,13 @@
-# 🌱 AMRWatch
-**IMY 772 – Web Information Systems Project (2026)**
+<div align="center">
+  <img src="AMR_Image.png" alt="AMR Watch" width="100%"/>
+</div>
 
-Client: Department of Plant and Soil Sciences  
-Institution: University of Pretoria  
-Deployment Platform: Amazon Web Services (AWS)  
+<div align="center">
+  Client: Department of Plant and Soil Sciences<br>
+  Institution: University of Pretoria<br>
+  Deployment Platform: Amazon Web Services (AWS)
+</div>
 
----
 
 ## Project Description
 
@@ -212,12 +214,12 @@ Key user needs:
 
 | Name               | Role                                         | GitHub Profile                                                                                     | LinkedIn Profile                                                                                                              |
 |--------------------|----------------------------------------------|----------------------------------------------------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------|
-| Nicholas Dobson    | Full-Stack Developer, DevOps                  | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/NicholasDobson)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/nicholas-dobson-a64a84355)   |
-| Mpho Tsotetsi      | Backend Developer                             | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/u22668323)        | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/mpho-tsotetsi-256375287/)    |
-| Taylor Sergel    | Full-Stack Developer, Team Lead               | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/ShaylinGovender) | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/taylor-sergel-aa267a354/)  |
-| Lonwabo Kwitshana  | Frontend Developer, UI/UX                     | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/7onwabo)          | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/lonwabo-kwitshana-b483831a6) |
-| Kyle Liebenberg   | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/u22608789)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/kyle-liebenberg-19a315325/)   |
-| Diya Budhia    | Backend Developer, System Integration         | [<img src="assets/github-icon.png" alt="GitHub" width="40"/>](https://github.com/diyaxbudhia)   | [<img src="assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/diya-budhia-a9124a355/)   |
+| Nicholas Dobson    | Full-Stack Developer, DevOps                  | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/NicholasDobson)   | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/nicholas-dobson-a64a84355)   |
+| Mpho Tsotetsi      | Backend Developer                             | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/u22668323)        | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/mpho-tsotetsi-256375287/)    |
+| Taylor Sergel    | Full-Stack Developer, Team Lead               | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/TaylorSergel) | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/taylor-sergel-aa267a354/)  |
+| Lonwabo Kwitshana  | Frontend Developer, UI/UX                     | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/7onwabo)          | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/lonwabo-kwitshana-b483831a6) |
+| Kyle Liebenberg   | Backend Developer, System Integration         | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/u22608789)   | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/kyle-liebenberg-19a315325/)   |
+| Diya Budhia    | Backend Developer, System Integration         | [<picture><source srcset="docs/assets/GitHub_Invertocat_White.svg" media="(prefers-color-scheme: dark)" /><img src="docs/assets/GitHub_Invertocat_Black.svg" alt="GitHub" width="40"/></picture>](https://github.com/diyaxbudhia)   | [<img src="docs/assets/linkedin-icon-2.svg" alt="LinkedIn" width="40"/>](https://www.linkedin.com/in/diya-budhia-a9124a355/)   |
 <p align="right">
    <a href="#table-of-contents">Back to top</a>
 </p>

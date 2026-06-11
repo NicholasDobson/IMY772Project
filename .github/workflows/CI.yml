@@ -28,7 +28,9 @@ jobs:
 
       - name: Run backend tests
         working-directory: ./backend
-        run: ./mvnw -B -ntp clean test
+        run: |
+          chmod +x ./mvnw
+          ./mvnw -B -ntp clean test
 
       - name: Upload backend test reports
         if: always()

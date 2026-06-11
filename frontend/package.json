@@ -18,9 +18,11 @@
   },
   "dependencies": {
     "@primeuix/themes": "^2.0.3",
+    "@types/leaflet.heat": "^0.2.5",
     "@vue-leaflet/vue-leaflet": "^0.10.1",
     "echarts": "^6.0.0",
     "leaflet": "^1.9.4",
+    "leaflet.heat": "^0.2.0",
     "pinia": "^3.0.4",
     "primeicons": "^7.0.0",
     "primevue": "^4.5.5",

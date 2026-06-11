@@ -614,7 +614,7 @@ const classChartOption = computed(() => ({
 }
 
 .kpi-value {
-  font-family: 'Zen Dots', sans-serif;
+  font-family: 'Inter', sans-serif;
   font-size: 32px;
   font-weight: 400;
   color: var(--c-heading);

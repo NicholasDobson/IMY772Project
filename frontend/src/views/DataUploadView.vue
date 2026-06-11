@@ -5,19 +5,31 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api
 
 type EtlFileType = 'EPICOLLECT' | 'BINARY_INFO' | 'AMR_FINDER' | 'STAR_AMR'
 
-const categories: {
+interface FileStructure {
+  headers: string[]
+  exampleRow: string[]
+}
+
+interface CategoryInfo {
   fileType: EtlFileType
   formKey: string
   title: string
   description: string
   icon: string
-}[] = [
+  structure: FileStructure
+}
+
+const categories: CategoryInfo[] = [
   {
     fileType: 'EPICOLLECT',
     formKey: 'epicollect',
     title: 'Epicollect (Field Data)',
     description: 'Field collection exports from Epicollect5.',
     icon: 'pi pi-table',
+    structure: {
+      headers: ['Site ID', 'Location Name', 'River Name', 'Lat', 'Lng', 'Sample ID', 'Sample Name', 'Analysis Type', 'Trip ID', 'Date', 'Temp', 'pH', 'TDS', 'EC', 'DO', 'Collector Email'],
+      exampleRow: ['A11', 'Pretoria (Midstream)', 'Apies River', '-25.7470', '28.2290', 'SAMP-0001', 'AR-001-2401', 'WGS', '2024-T01', '2024-01-09', '13.5', '6.7', '107', '714', '4', 'jane.doe@tuks.co.za']
+    }
   },
   {
     fileType: 'BINARY_INFO',
@@ -25,6 +37,10 @@ const categories: {
     title: 'Binary Info (Isolates)',
     description: 'Isolate and binary characterisation spreadsheets.',
     icon: 'pi pi-database',
+    structure: {
+      headers: ['Sample ID', 'Isolate ID', 'Isolate Number', 'Organism', 'Context', 'AR Code', 'Virulence Genes', 'Intl1', 'Intl2', 'Intl3', 'TEM', 'SHV', 'Owner Email'],
+      exampleRow: ['SAMP-0001', 'ISO-101', 'A112H', 'Citrobacter freundii', 'River water (upstream)', 'ESBL', 'fyuA', '1', '1', '1', '0', '1', 'jane.doe@tuks.co.za']
+    }
   },
   {
     fileType: 'AMR_FINDER',
@@ -32,6 +48,10 @@ const categories: {
     title: 'AMR Finder (Gene Sequences)',
     description: 'Resistance gene detection outputs for sequences.',
     icon: 'pi pi-sitemap',
+    structure: {
+      headers: ['Isolate ID', 'Gene Symbol', 'Sequence Name', 'Element Type', 'Class', 'Subclass', 'Target Length', 'Reference Length', 'Identity %', 'Coverage %', 'Alignment Length', 'Accession'],
+      exampleRow: ['ISO-100', 'aph(3\')-Ia', 'aminoglycoside O-phosphotransferase APH(3\')-Ia', 'AMR', 'AMINOGLYCOSIDE', 'KANAMYCIN', '816', '816', '79.23', '76.44', '623', 'WP_015345217.1']
+    }
   },
   {
     fileType: 'STAR_AMR',
@@ -39,6 +59,10 @@ const categories: {
     title: 'Star AMR (WGS Metrics)',
     description: 'Whole-genome sequencing AMR metrics and summaries.',
     icon: 'pi pi-chart-bar',
+    structure: {
+      headers: ['Isolate ID', 'Quality Status', 'Genotype', 'Predicted Phenotype', 'SIR Profile', 'Plasmid', 'Genome Length', 'N50 Value'],
+      exampleRow: ['ISO-100', 'Passed', 'aph(6)-Id', 'ertapenem', 'Intermediate', 'IncFIB(AP001918)', '4703638', '500571']
+    }
   },
 ]
 
@@ -67,6 +91,9 @@ const batchStatus = ref<'idle' | 'uploading' | 'success' | 'error'>('idle')
 const globalMessage = ref('')
 const globalWarnings = ref<string[]>([])
 
+// Info Modal State
+const selectedInfo = ref<CategoryInfo | null>(null)
+
 const hasStagedFiles = computed(() => Object.values(slots).some(slot => slot.file !== null))
 
 function isValidFormat(file: File): boolean {
@@ -89,7 +116,6 @@ function assignFile(fileType: EtlFileType, file: File | null, clearInputId?: str
 
   slots[fileType].file = file
   slots[fileType].error = ''
-  // Reset global states if user modifies selection
   batchStatus.value = 'idle'
   globalMessage.value = ''
   globalWarnings.value = []
@@ -120,6 +146,14 @@ function clearAllSlots(): void {
   globalWarnings.value = []
 }
 
+function openInfo(cat: CategoryInfo) {
+  selectedInfo.value = cat
+}
+
+function closeInfo() {
+  selectedInfo.value = null
+}
+
 async function uploadBatch(): Promise<void> {
   if (!hasStagedFiles.value) return
 
@@ -129,7 +163,6 @@ async function uploadBatch(): Promise<void> {
 
   const formData = new FormData()
   
-  // Map our slotted files to the exact param names expected by the Spring Boot controller
   categories.forEach(cat => {
     const file = slots[cat.fileType].file
     if (file) formData.append(cat.formKey, file)
@@ -147,10 +180,8 @@ async function uploadBatch(): Promise<void> {
       globalMessage.value = data.message || 'Batch uploaded successfully.'
       globalWarnings.value = data.warnings || []
       
-      // Clear out the files so the user knows it's done
       Object.keys(slots).forEach((key) => clearSlot(key as EtlFileType))
     } else {
-      // Backend returns plain text for 400/500 errors
       const errorText = await res.text()
       batchStatus.value = 'error'
       globalMessage.value = errorText || `Upload failed with status: ${res.status}`
@@ -198,7 +229,12 @@ setTimeout(() => {
               <i :class="`pi ${cat.icon} card-icon`"></i>
             </span>
             <div class="card-titles">
-              <h3 class="card-title">{{ cat.title }}</h3>
+              <div class="card-title-row">
+                <h3 class="card-title">{{ cat.title }}</h3>
+                <button class="info-btn" @click.prevent="openInfo(cat)" title="View required format">
+                  <i class="pi pi-info-circle"></i>
+                </button>
+              </div>
               <p class="card-desc">{{ cat.description }}</p>
             </div>
           </div>
@@ -278,10 +314,46 @@ setTimeout(() => {
         </div>
       </div>
     </section>
+
+    <Transition name="fade">
+      <div v-if="selectedInfo" class="modal-backdrop" @click="closeInfo">
+        <div class="modal-content" @click.stop>
+          <div class="modal-header">
+            <div class="modal-title-group">
+              <i :class="`pi ${selectedInfo.icon} modal-title-icon`"></i>
+              <h2>{{ selectedInfo.title }} Format</h2>
+            </div>
+            <button class="modal-close-btn" @click="closeInfo"><i class="pi pi-times"></i></button>
+          </div>
+          
+          <div class="modal-body">
+            <p class="modal-instruction">
+              Your file must contain the following column headers. The order of the columns does not matter, but the header names must match exactly.
+            </p>
+            
+            <div class="table-responsive">
+              <table class="format-table">
+                <thead>
+                  <tr>
+                    <th v-for="header in selectedInfo.structure.headers" :key="header">{{ header }}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td v-for="(cell, idx) in selectedInfo.structure.exampleRow" :key="idx">{{ cell }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <style scoped>
+/* Keeping all your existing styles below */
 .sr-only {
   position: absolute;
   width: 1px;
@@ -299,9 +371,7 @@ setTimeout(() => {
   max-width: 980px;
   opacity: 0;
   transform: translateY(6px);
-  transition:
-    opacity 0.35s ease,
-    transform 0.35s ease;
+  transition: opacity 0.35s ease, transform 0.35s ease;
 }
 
 .upload-page--visible {
@@ -351,11 +421,6 @@ setTimeout(() => {
   color: var(--c-text-muted);
 }
 
-.section-desc strong {
-  font-weight: 600;
-  color: var(--c-text);
-}
-
 .upload-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -377,10 +442,7 @@ setTimeout(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  transition:
-    border-color 0.18s,
-    box-shadow 0.18s,
-    opacity 0.2s;
+  transition: border-color 0.18s, box-shadow 0.18s, opacity 0.2s;
 }
 
 .upload-card--staged {
@@ -421,6 +483,14 @@ setTimeout(() => {
 
 .card-titles {
   min-width: 0;
+  flex: 1;
+}
+
+.card-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 4px;
 }
 
 .card-title {
@@ -429,13 +499,32 @@ setTimeout(() => {
   font-weight: 600;
   color: var(--c-heading);
   line-height: 1.3;
-  margin-bottom: 4px;
+  margin: 0;
+}
+
+.info-btn {
+  background: transparent;
+  border: none;
+  color: var(--c-text-dim);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.info-btn:hover {
+  color: var(--c-brand);
+  background: var(--c-brand-dim);
 }
 
 .card-desc {
   font-size: 11.5px;
   color: var(--c-text-muted);
   line-height: 1.45;
+  margin: 0;
 }
 
 .drop-zone {
@@ -449,9 +538,7 @@ setTimeout(() => {
   border-radius: 8px;
   background: var(--c-bg);
   cursor: pointer;
-  transition:
-    border-color 0.15s,
-    background 0.15s;
+  transition: border-color 0.15s, background 0.15s;
 }
 
 .drop-zone:hover {
@@ -528,11 +615,6 @@ setTimeout(() => {
 .btn--large {
   font-size: 14px;
   padding: 10px 24px;
-}
-
-.btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
 }
 
 .btn--primary {
@@ -627,5 +709,133 @@ setTimeout(() => {
 
 .error-text {
   color: var(--c-red);
+}
+
+/* --- Modal Styles --- */
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.modal-content {
+  background: var(--c-bg);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 900px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  display: flex;
+  flex-direction: column;
+  max-height: 85vh;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.modal-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-title-icon {
+  color: var(--c-brand);
+  font-size: 20px;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--c-heading);
+}
+
+.modal-close-btn {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  color: var(--c-text-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.modal-close-btn:hover {
+  background: var(--c-border);
+  color: var(--c-heading);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal-instruction {
+  font-size: 13px;
+  color: var(--c-text-muted);
+  margin: 0 0 16px 0;
+  line-height: 1.5;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  background: var(--c-card);
+}
+
+.format-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.format-table th {
+  background: var(--c-bg);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--c-heading);
+  padding: 12px 16px;
+  border-bottom: 2px solid var(--c-border-strong);
+}
+
+.format-table td {
+  padding: 12px 16px;
+  font-size: 12.5px;
+  color: var(--c-text);
+  border-bottom: 1px solid var(--c-border);
+}
+
+.format-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Modal Vue Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.25s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
 }
 </style>

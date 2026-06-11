@@ -116,6 +116,54 @@ class SitesControllerTest {
     }
 
     @Test
+    void shouldReturnAmrSequences() throws Exception {
+        when(sitesService.getAmrSequencesBySiteId("A10")).thenReturn(List.of(
+                Map.of(
+                        "sequenceId", "SEQ-001",
+                        "geneSymbol", "blaTEM",
+                        "elementType", "AMR",
+                        "resistanceClass", "Beta-lactam",
+                        "identityPercentage", 99.5,
+                        "coveragePercentage", 100.0
+                )
+        ));
+
+        mockMvc.perform(get("/api/v1/sites/A10/amr-sequences"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].sequenceId").value("SEQ-001"))
+                .andExpect(jsonPath("$[0].geneSymbol").value("blaTEM"))
+                .andExpect(jsonPath("$[0].resistanceClass").value("Beta-lactam"));
+    }
+
+    @Test
+    void shouldReturnWgsMetrics() throws Exception {
+        when(sitesService.getWgsMetricsBySiteId("A10")).thenReturn(List.of(
+                Map.of(
+                        "wgsId", "WGS-001",
+                        "isolateId", "ISO-101",
+                        "qualityStatus", "PASS",
+                        "predictedSirProfile", "Resistant",
+                        "genomeLength", 5200000,
+                        "n50Value", 450000
+                )
+        ));
+
+        mockMvc.perform(get("/api/v1/sites/A10/wgs-metrics"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].wgsId").value("WGS-001"))
+                .andExpect(jsonPath("$[0].qualityStatus").value("PASS"))
+                .andExpect(jsonPath("$[0].predictedSirProfile").value("Resistant"));
+    }
+
+    @Test
+    void shouldReturn500WhenServiceThrows() throws Exception {
+        when(sitesService.getAllSites()).thenThrow(new RuntimeException("DB connection failed"));
+
+        mockMvc.perform(get("/api/v1/sites"))
+                .andExpect(status().isInternalServerError());
+    }
+
+    @Test
     void shouldReturnComparisonStats() throws Exception {
         Map<String, Object> resultA = new java.util.HashMap<>();
         resultA.put("siteId", "A10");

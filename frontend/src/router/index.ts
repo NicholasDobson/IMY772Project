@@ -44,6 +44,12 @@ const router = createRouter({
       meta: { requiresAdmin: true },
     },
     {
+      path: '/admin/knowledge',
+      name: 'knowledge-management',
+      component: () => import('../views/KnowledgeManagementView.vue'),
+      meta: { requiresAdmin: true },
+    },
+    {
       path: '/settings',
       name: 'settings',
       component: () => import('../views/SettingsView.vue'),

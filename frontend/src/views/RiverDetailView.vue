@@ -592,7 +592,7 @@ const safetyRating = computed(() => {
 .hero-name-btn { display: flex; align-items: center; gap: 12px; background: none; border: none; padding: 0; cursor: pointer; text-align: left; width: 100%; margin-bottom: 14px; }
 .hero-name-btn:hover .page-title { color: var(--c-brand); }
 .hero-name-btn:hover .hero-chevron { color: var(--c-brand); }
-.page-title { font-family: 'Zen Dots', sans-serif; font-size: 30px; font-weight: 700; color: var(--c-heading); margin: 0; line-height: 1.1; transition: color 0.15s; }
+.page-title { font-family: 'Inter', sans-serif; font-size: 30px; font-weight: 700; color: var(--c-heading); margin: 0; line-height: 1.1; transition: color 0.15s; }
 .hero-chevron { font-size: 14px; color: var(--c-text-muted); transition: transform 0.2s, color 0.15s; flex-shrink: 0; }
 .hero-chevron--open { transform: rotate(180deg); }
 .hero-dropdown { background: var(--c-bg); border: 1px solid var(--c-border); border-radius: 8px; margin-bottom: 14px; overflow: hidden; }
@@ -620,7 +620,7 @@ const safetyRating = computed(() => {
 .safety-icon { font-size: 24px; }
 .safety-body { flex: 1; display: flex; flex-direction: column; gap: 4px; }
 .safety-header-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 2px; }
-.safety-level { font-family: 'Zen Dots', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+.safety-level { font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
 .safety-tag { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--c-text-muted); background: var(--c-card); border: 1px solid var(--c-border); border-radius: 4px; padding: 1px 7px; }
 .safety-headline { font-size: 14px; font-weight: 600; color: var(--c-heading); margin: 0; }
 .safety-detail { font-size: 12.5px; color: var(--c-text-muted); margin: 0; line-height: 1.55; }
@@ -629,7 +629,7 @@ const safetyRating = computed(() => {
 .stat-icon { width: 40px; height: 40px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
 .stat-body { display: flex; flex-direction: column; gap: 2px; }
 .stat-label { font-size: 10px; color: var(--c-text-muted); text-transform: uppercase; letter-spacing: 0.07em; }
-.stat-value { font-size: 24px; font-weight: 700; color: var(--c-heading); line-height: 1.1; font-family: 'Zen Dots', sans-serif; }
+.stat-value { font-size: 24px; font-weight: 700; color: var(--c-heading); line-height: 1.1; font-family: 'Inter', sans-serif; }
 .stat-denom { font-size: 14px; color: var(--c-text-muted); font-family: 'DM Sans', sans-serif; font-weight: 400; }
 .chart-section { margin-bottom: 22px; }
 .section-header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }

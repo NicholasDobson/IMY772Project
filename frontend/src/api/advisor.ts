@@ -8,10 +8,19 @@ export interface AdvisorRequest {
   contextId?: string
 }
 
+export interface SourceReference {
+  documentId: number
+  documentTitle: string
+  chunkPreview: string
+  pageNumbers: string | null
+  similarity: number
+}
+
 export interface AdvisorResponse {
   reply: string | null
   ok: boolean
   error: string | null
+  sources?: SourceReference[] | null
 }
 
 export async function askAdvisor(req: AdvisorRequest): Promise<AdvisorResponse> {
