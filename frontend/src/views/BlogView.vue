@@ -2,7 +2,7 @@
 /* -- Imports --------------------------------------------------- */
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { getAllBlogs, type Blog } from '@/api/blog'
+import { getAllBlogs, deleteBlog, type Blog } from '@/api/blog'
 
 /* -- Reactive state --------------------------------------------- */
 const router = useRouter()
@@ -49,6 +49,24 @@ const expandBlog = (blog: Blog) => {
   selectedBlog.value = blog
 }
 
+const handleDelete = async (blog: Blog, event: MouseEvent) => {
+  event.stopPropagation()
+  if (!confirm(`Are you sure you want to delete "${blog.title}"?`)) return
+  try {
+    await deleteBlog(blog.blogId)
+    blogs.value = blogs.value.filter(b => b.blogId !== blog.blogId)
+    if (selectedBlog.value?.blogId === blog.blogId) selectedBlog.value = null
+  } catch (error) {
+    console.error('Failed to delete blog:', error)
+    alert('Failed to delete blog. Please try again.')
+  }
+}
+
+const handleEdit = (blog: Blog, event: MouseEvent) => {
+  event.stopPropagation()
+  router.push(`/blog/edit/${blog.blogId}`)
+}
+
 const closeDetail = () => {
   selectedBlog.value = null
 }
@@ -60,7 +78,7 @@ const relatedBlogs = computed(() => {
   const shuffled = [...otherBlogs]
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1))
-    ;[shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]
+    ;[shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!]
   }
   return shuffled.slice(0, 5)
 })
@@ -115,6 +133,10 @@ onMounted(loadBlogs)
           <div class="blog-meta">
             <span class="author">By {{ blog.author }}</span>
             <span class="date">{{ formatDate(blog.datePublished) }}</span>
+          </div>
+          <div class="blog-actions">
+            <button class="btn-edit" @click="handleEdit(blog, $event)"> Edit</button>
+            <button class="btn-delete" @click="handleDelete(blog, $event)"> Delete</button>
           </div>
         </div>
       </div>
@@ -543,4 +565,41 @@ onMounted(loadBlogs)
   line-height: 1.7;
   font-size: 1rem;
 }
+
+.blog-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.btn-edit,
+.btn-delete {
+  padding: 0.4rem 0.85rem;
+  border: none;
+  border-radius: 0.4rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.btn-edit {
+  background: var(--c-brand);
+  color: white;
+}
+
+.btn-edit:hover {
+  opacity: 0.85;
+}
+
+.btn-delete {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-delete:hover {
+  background: #fca5a5;
+}
+
 </style>
