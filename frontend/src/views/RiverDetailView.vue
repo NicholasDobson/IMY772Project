@@ -641,7 +641,7 @@ const safetyRating = computed(() => {
 .param-tab { padding: 4px 12px; border-radius: 20px; border: 1.5px solid var(--c-border); background: transparent; color: var(--c-text-muted); font-size: 11px; cursor: pointer; transition: all 0.15s; font-family: 'DM Sans', sans-serif; }
 .param-tab:hover { background: var(--c-card); color: var(--c-text); }
 .param-tab--active { font-weight: 600; }
-.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+.two-col { display: grid; grid-template-columns: 1fr; gap: 22px; margin-bottom: 22px; }
 @media (max-width:900px) { .two-col { grid-template-columns: 1fr; } }
 .binary-profile { display: flex; flex-direction: column; gap: 12px; padding: 18px; }
 .marker-row { display: grid; grid-template-columns: 48px 1fr 48px; align-items: center; gap: 10px; }
