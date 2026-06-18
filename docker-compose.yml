@@ -11,6 +11,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d amr_dashboard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   pgadmin:
     image: dpage/pgadmin4
@@ -43,6 +48,53 @@ services:
       - "11434:11434"
     volumes:
       - ollama_data:/root/.ollama
+
+  backend:
+    build:
+      context: ./backend
+    container_name: amr-backend
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/amr_dashboard
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      MINIO_ENDPOINT: http://amr-minio:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      MINIO_BUCKET: amr-knowledge
+      EMBEDDING_API_URL: http://amr-ollama:11434/v1/embeddings
+      EMBEDDING_API_KEY: ollama
+      EMBEDDING_MODEL: nomic-embed-text
+      EMBEDDING_DIMENSIONS: 768
+      # Set real values via a .env file or shell env — do not commit secrets
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-eu-north-1}
+      COGNITO_USER_POOL_ID: ${COGNITO_USER_POOL_ID:-eu-north-1_y8MZlz9Vl}
+      COGNITO_REGION: ${COGNITO_REGION:-eu-north-1}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      ollama:
+        condition: service_started
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_COGNITO_DOMAIN: ${VITE_COGNITO_DOMAIN:-}
+        VITE_COGNITO_CLIENT_ID: ${VITE_COGNITO_CLIENT_ID:-}
+        VITE_COGNITO_REDIRECT_URI: ${VITE_COGNITO_REDIRECT_URI:-http://localhost/}
+        VITE_COGNITO_CLIENT_SECRET: ${VITE_COGNITO_CLIENT_SECRET:-}
+    container_name: amr-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
 
 volumes:
   postgres_data:

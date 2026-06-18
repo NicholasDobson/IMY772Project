@@ -1,0 +1,22 @@
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+
+# Build-time Cognito config (override via docker-compose build args)
+ARG VITE_COGNITO_DOMAIN=
+ARG VITE_COGNITO_CLIENT_ID=
+ARG VITE_COGNITO_REDIRECT_URI=
+ARG VITE_COGNITO_CLIENT_SECRET=
+ENV VITE_COGNITO_DOMAIN=$VITE_COGNITO_DOMAIN
+ENV VITE_COGNITO_CLIENT_ID=$VITE_COGNITO_CLIENT_ID
+ENV VITE_COGNITO_REDIRECT_URI=$VITE_COGNITO_REDIRECT_URI
+ENV VITE_COGNITO_CLIENT_SECRET=$VITE_COGNITO_CLIENT_SECRET
+
+COPY . .
+RUN npm run build-only
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
