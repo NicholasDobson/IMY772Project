@@ -89,7 +89,7 @@ interface SiteData {
 }
 
 // ── Constants ──────────────────────────────────────────────────────
-const BASE = 'http://localhost:8080/api/v1'
+const BASE = '/api/v1'
 const MAX_SLOTS = 5
 const COLORS = ['#3B82F6', '#EF4444', '#10B981', '#F59E0B', '#8B5CF6']
 const TRIP_OPTIONS = ['all', 'Trip 1', 'Trip 2'] as const

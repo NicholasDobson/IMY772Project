@@ -1,0 +1,75 @@
+IMY772 AMR Dashboard — EC2 Deployment Notes
+============================================
+Date: 2026-06-11
+Server: Ubuntu 26.04 LTS on AWS EC2 (t3.small)
+EC2 Public DNS: ec2-34-203-28-148.compute-1.amazonaws.com
+API Base URL: http://ec2-34-203-28-148.compute-1.amazonaws.com:8080
+
+
+WHAT WAS DEPLOYED
+-----------------
+- Spring Boot API (backend-0.0.1-SNAPSHOT.jar) running on port 8080
+- PostgreSQL 15 running in Docker on port 5432 (internal only)
+
+
+INFRASTRUCTURE
+--------------
+- EC2 instance in AWS us-east-1
+- PostgreSQL database runs as a Docker container on the same EC2 instance
+- Docker volume (postgres_data) persists database across container restarts
+- AWS Cognito (us-east-1_ylLB20Khz) handles authentication
+- Groq cloud API handles the AI advisor chatbox (no local GPU/Ollama needed)
+
+
+HOW THE DEPLOYMENT WORKS (deploy.sh)
+-------------------------------------
+1. Builds the Spring Boot JAR locally via Maven (./mvnw package -DskipTests)
+2. Copies the JAR and docker-compose.yml to EC2 via SCP
+3. On the EC2:
+   a. Installs docker-compose-v2 via apt
+   b. Pulls and starts the PostgreSQL 15 container (docker compose up -d postgres)
+   c. Hibernate auto-creates all database tables on first boot (ddl-auto: update)
+   d. Starts the Spring Boot API with nohup so it persists after SSH disconnect
+   e. JVM heap capped at 450MB (-Xmx450m) to fit within the 2GB instance
+
+
+EC2 SECURITY GROUP INBOUND RULES
+----------------------------------
+- Port 22  (SSH)  — restricted to developer IPs
+- Port 8080 (API) — open to 0.0.0.0/0
+
+
+ENVIRONMENT VARIABLES SET ON EC2
+----------------------------------
+- GROQ_API_KEY         — Groq cloud LLM API key for the advisor chatbox
+- AWS_ACCESS_KEY_ID    — IAM credentials for Cognito user management
+- AWS_SECRET_ACCESS_KEY
+- COGNITO_USER_POOL_ID — us-east-1_ylLB20Khz
+- COGNITO_REGION       — us-east-1
+- DB_URL defaults to   — jdbc:postgresql://localhost:5432/amr_dashboard
+
+
+HOW TO REDEPLOY
+---------------
+From the project root on your local machine:
+  ./mvnw package -DskipTests    # build latest JAR
+  ./deploy.sh                   # push and restart on EC2
+
+
+HOW TO CHECK LOGS ON EC2
+-------------------------
+  ssh -i ~/Downloads/IMYAMR.pem ubuntu@ec2-34-203-28-148.compute-1.amazonaws.com
+  tail -f ~/app.log
+
+
+HOW TO RESTART THE API
+-----------------------
+  ssh into EC2, then:
+  pkill -f "backend-0.0.1-SNAPSHOT.jar"
+  nohup env GROQ_API_KEY="..." ... java -Xmx450m -jar ~/backend-0.0.1-SNAPSHOT.jar > ~/app.log 2>&1 &
+
+
+FRONTEND CONFIGURATION
+-----------------------
+Point the frontend at the EC2 API by setting in frontend/.env.local:
+  VITE_API_BASE_URL=http://ec2-34-203-28-148.compute-1.amazonaws.com:8080

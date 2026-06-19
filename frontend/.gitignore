@@ -40,3 +40,4 @@ __screenshots__/
 
 test-results/
 playwright-report/
+.env.production

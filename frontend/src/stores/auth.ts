@@ -7,7 +7,7 @@ const CLIENT_SECRET = import.meta.env.VITE_COGNITO_CLIENT_SECRET as string | und
 const REDIRECT_URI = (import.meta.env.VITE_COGNITO_REDIRECT_URI as string) || 'http://localhost:5173/'
 
 function parseJwt(token: string): Record<string, unknown> {
-  const base64Url = token.split('.')[1]
+  const base64Url = token.split('.')[1] ?? ''
   const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/')
   const json = decodeURIComponent(
     atob(base64)
@@ -84,7 +84,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function login() {
     const verifier = await generateCodeVerifier()
     const challenge = await generateCodeChallenge(verifier)
-    sessionStorage.setItem('pkce_verifier', verifier)
+    localStorage.setItem('pkce_verifier', verifier)
 
     const params = new URLSearchParams({
       response_type: 'code',
@@ -99,7 +99,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   async function handleCallback(code: string) {
-    const verifier = sessionStorage.getItem('pkce_verifier') ?? ''
+    const verifier = localStorage.getItem('pkce_verifier') ?? ''
     console.log('[auth] handleCallback — verifier present:', !!verifier, '| client_id:', CLIENT_ID)
 
     const body = new URLSearchParams({
@@ -131,7 +131,7 @@ export const useAuthStore = defineStore('auth', () => {
     accessToken.value = tokens.access_token
     localStorage.setItem('id_token', tokens.id_token)
     localStorage.setItem('access_token', tokens.access_token)
-    sessionStorage.removeItem('pkce_verifier')
+    localStorage.removeItem('pkce_verifier')
 
     window.history.replaceState({}, '', REDIRECT_URI)
   }
