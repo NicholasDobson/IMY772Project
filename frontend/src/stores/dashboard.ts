@@ -13,6 +13,16 @@ import type {
   AffectedRiverSitesResponse,
 } from '@/api/dashboard'
 import type { StatCardData, Province, TopOrganism, ResistanceGene, RiverSite } from '@/types/amr'
+import {
+  STAT_CARDS,
+  MONTHS,
+  MONTHLY_NORMAL,
+  MONTHLY_ALERT,
+  PROVINCES,
+  RESISTANCE_GENES,
+  RIVER_SITES,
+  TOP_ORGANISMS,
+} from '@/data/dashboard'
 
 /* ── Dashboard Store ──────────────────────────────────────────────
    Fetches all dashboard endpoints in parallel. Each section is
@@ -61,13 +71,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
   }
 
   /* ── Computed: 4 stat cards (StatCardData[]) ────────────────── */
-  const statCards = computed<StatCardData[] | null>(() => {
+  const statCards = computed<StatCardData[]>(() => {
     const ir  = _incidentRate.value
     const sc  = _sampleCount.value
     const hrs = _highRiskSites.value
     const mc  = _monthlyCases.value
 
-    if (!ir && !sc && !hrs && !mc) return null
+    if (!ir && !sc && !hrs && !mc) return [...STAT_CARDS]
 
     return [
       {
@@ -114,9 +124,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   /* ── Computed: province risk ────────────────────────────────── */
-  const provinces = computed<Province[] | null>(() => {
+  const provinces = computed<Province[]>(() => {
     const rbp = _riskByProvince.value
-    if (!rbp) return null
+    if (!rbp) return [...PROVINCES]
     return rbp.provinces.map(p => ({
       name:    p.name,
       risk:    p.riskLevel,
@@ -125,9 +135,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   /* ── Computed: top organisms ────────────────────────────────── */
-  const topOrganisms = computed<TopOrganism[] | null>(() => {
+  const topOrganisms = computed<TopOrganism[]>(() => {
     const to = _topOrganisms.value
-    if (!to) return null
+    if (!to) return [...TOP_ORGANISMS]
     return to.organisms.map(o => ({
       name:           o.name,
       arCode:         o.arCode,
@@ -139,9 +149,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   /* ── Computed: top resistance genes ─────────────────────────── */
-  const resistanceGenes = computed<ResistanceGene[] | null>(() => {
+  const resistanceGenes = computed<ResistanceGene[]>(() => {
     const rg = _resistanceGenes.value
-    if (!rg) return null
+    if (!rg) return [...RESISTANCE_GENES]
     return rg.genes.map(g => ({
       gene:            g.gene,
       resistanceClass: g.resistanceClass,
@@ -152,9 +162,9 @@ export const useDashboardStore = defineStore('dashboard', () => {
   })
 
   /* ── Computed: affected river sites ─────────────────────────── */
-  const affectedRiverSites = computed<RiverSite[] | null>(() => {
+  const affectedRiverSites = computed<RiverSite[]>(() => {
     const rs = _affectedRiverSites.value
-    if (!rs) return null
+    if (!rs) return [...RIVER_SITES]
     return rs.sites.map(s => ({
       siteId:      s.siteId,
       river:       s.river,
@@ -171,13 +181,13 @@ export const useDashboardStore = defineStore('dashboard', () => {
     _monthlyTrend.value?.year ?? selectedYear.value
   )
   const months = computed<string[]>(() =>
-    _monthlyTrend.value?.data.map(d => d.monthLabel) ?? []
+    _monthlyTrend.value?.data.map(d => d.monthLabel) ?? [...MONTHS]
   )
   const monthlyNormal = computed<(number | null)[]>(() =>
-    _monthlyTrend.value?.data.map(d => (d.alert ? null : d.caseCount)) ?? []
+    _monthlyTrend.value?.data.map(d => (d.alert ? null : d.caseCount)) ?? [...MONTHLY_NORMAL]
   )
   const monthlyAlert = computed<(number | null)[]>(() =>
-    _monthlyTrend.value?.data.map(d => (d.alert ? d.caseCount : null)) ?? []
+    _monthlyTrend.value?.data.map(d => (d.alert ? d.caseCount : null)) ?? [...MONTHLY_ALERT]
   )
 
   /* ── Action: switch chart year ───────────────────────────────── */
@@ -231,6 +241,7 @@ export const useDashboardStore = defineStore('dashboard', () => {
     if (rg.status  === 'fulfilled') _resistanceGenes.value     = rg.value
     if (ars.status === 'fulfilled') _affectedRiverSites.value  = ars.value
     if (ay.status  === 'fulfilled') availableYears.value       = ay.value.years
+    else if (availableYears.value.length === 0) availableYears.value = [new Date().getFullYear()]
 
     if (results.every(r => r.status === 'rejected')) {
       error.value = 'Dashboard data unavailable — showing cached data.'

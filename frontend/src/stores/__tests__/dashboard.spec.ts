@@ -56,14 +56,16 @@ describe('useDashboardStore', () => {
     expect(store.availableYears).toEqual([])
   })
 
-  it('statCards returns null before any fetch', () => {
+  it('statCards returns static fallback data before any fetch', () => {
     const store = useDashboardStore()
-    expect(store.statCards).toBeNull()
+    expect(store.statCards).toHaveLength(4)
+    expect(store.statCards[0].id).toBe('incident-rate')
   })
 
-  it('provinces returns null before any fetch', () => {
+  it('provinces returns static fallback data before any fetch', () => {
     const store = useDashboardStore()
-    expect(store.provinces).toBeNull()
+    expect(store.provinces.length).toBeGreaterThan(0)
+    expect(store.provinces[0].name).toBe('Gauteng')
   })
 
   /* ── fetchAll with all failures ──────────────────────────────── */

@@ -15,11 +15,11 @@ import type { RiskLevel } from '@/types/amr'
 /* ── Store — live database data ──────────────────────── */
 const store = useDashboardStore()
 
-const displayStatCards = computed(() => store.statCards ?? [])
-const displayProvinces = computed(() => store.provinces ?? [])
-const displayOrganisms = computed(() => store.topOrganisms ?? [])
-const displayResistanceGenes = computed(() => store.resistanceGenes ?? [])
-const displayRiverSites = computed(() => store.affectedRiverSites ?? [])
+const displayStatCards = computed(() => store.statCards)
+const displayProvinces = computed(() => store.provinces)
+const displayOrganisms = computed(() => store.topOrganisms)
+const displayResistanceGenes = computed(() => store.resistanceGenes)
+const displayRiverSites = computed(() => store.affectedRiverSites)
 const displayMonths = computed(() => store.months)
 const displayNormal = computed(() => store.monthlyNormal)
 const displayAlert = computed(() => store.monthlyAlert)
