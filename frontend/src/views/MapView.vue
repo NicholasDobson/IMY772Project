@@ -429,7 +429,7 @@ import {
 
 const router = useRouter();
 const route = useRoute();
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 const MAX_LAYERS = 3;
 const LAYER_COLORS = ['#2563EB', '#DC2626', '#059669'];

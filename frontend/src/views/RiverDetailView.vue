@@ -18,7 +18,7 @@ interface EChartsTooltipItem {
   seriesIndex: number
 }
 
-const BASE = 'http://localhost:8080/api/v1'
+const BASE = '/api/v1'
 
 
 const vClickOutside = {
