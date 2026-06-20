@@ -116,7 +116,7 @@ const singleCategory: CategoryInfo = {
   icon: 'pi pi-file-import',
   structure: {
     headers: [
-      'Sample Name', 'Sample Analysis Type', 'Isolate ID', 'Organism', 'Location', 'River Name',
+      'Sample Name', 'Sample Analysis Type', 'Isolate ID', 'Organism', 'Country', 'Location', 'River Name',
       'Isolation source', 'Collection Date', 'Latitude', 'Longitude', 'Collected By',
       'AMR Resistance genes', 'Sequence Name', 'Element type', 'Class', 'Subclass',
       'Target length', 'Reference sequence length', '% Coverage of reference sequence',
@@ -125,7 +125,7 @@ const singleCategory: CategoryInfo = {
       'pH', 'Temp of water', 'TDS (mg/L)', 'Dissolved Oxygen (mg/L)'
     ],
     exampleRow: [
-      'SAMP-0001', 'WGS', 'ISO-100', 'Klebsiella pneumoniae', 'Groenkloof', 'Apies River',
+      'SAMP-0001', 'WGS', 'ISO-100', 'Klebsiella pneumoniae', 'South Africa', 'Groenkloof', 'Apies River',
       'River Water', '30-11-2017', '-25.7470', '28.2290', 'jane.doe@tuks.co.za',
       "aph(3')-Ia", "aminoglycoside O-phosphotransferase APH(3')-Ia", 'AMR', 'AMINOGLYCOSIDE', 'KANAMYCIN',
       '816', '816', '76,44',
