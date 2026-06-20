@@ -1,9 +1,24 @@
+-- Tracks each data-import run (one multi-file batch or one single-file upload).
+-- Domain rows below carry an import_id stamped at creation, enabling per-import rollback.
+CREATE TABLE import_batches (
+    import_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    import_type VARCHAR(20),     -- 'SINGLE' or 'MULTI'
+    file_names TEXT,
+    imported_at TIMESTAMP WITHOUT TIME ZONE,
+    site_count INTEGER,
+    sample_count INTEGER,
+    isolate_count INTEGER,
+    sequence_count INTEGER,
+    wgs_count INTEGER
+);
+
 CREATE TABLE sites (
     site_id VARCHAR(50) PRIMARY KEY,
     location_name VARCHAR(255),
     river_name VARCHAR(255),
     latitude DOUBLE PRECISION,
-    longitude DOUBLE PRECISION
+    longitude DOUBLE PRECISION,
+    import_id UUID -- import run that created this row (null for pre-existing data)
 );
 
 CREATE TABLE water_samples (
@@ -18,7 +33,8 @@ CREATE TABLE water_samples (
     ec DOUBLE PRECISION,
     dissolved_oxygen DOUBLE PRECISION,
     sample_name VARCHAR(255),
-    sample_analysis_type VARCHAR(100)
+    sample_analysis_type VARCHAR(100),
+    import_id UUID
 );
 
 CREATE TABLE isolates (
@@ -30,7 +46,8 @@ CREATE TABLE isolates (
     source_context VARCHAR(255),
     ar_code VARCHAR(50),
     binary_typing_profile JSONB, -- Stores the dynamic true/false flags for genes
-    virulence_genes TEXT
+    virulence_genes TEXT,
+    import_id UUID
 );
 
 CREATE TABLE amr_sequences (
@@ -46,7 +63,8 @@ CREATE TABLE amr_sequences (
     target_length INTEGER,
     reference_sequence_length INTEGER,
     alignment_length INTEGER,
-    accession_closest_sequence VARCHAR(100)
+    accession_closest_sequence VARCHAR(100),
+    import_id UUID
 );
 
 CREATE TABLE wgs_metrics (
@@ -58,7 +76,8 @@ CREATE TABLE wgs_metrics (
     plasmid TEXT,
     genome_length INTEGER,
     n50_value INTEGER,
-    predicted_sir_profile VARCHAR(100)
+    predicted_sir_profile VARCHAR(100),
+    import_id UUID
 );
 
 CREATE TABLE blogs (

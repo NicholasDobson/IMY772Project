@@ -96,6 +96,126 @@ const selectedInfo = ref<CategoryInfo | null>(null)
 
 const hasStagedFiles = computed(() => Object.values(slots).some(slot => slot.file !== null))
 
+// --- Upload mode tabs ---
+type UploadMode = 'multi' | 'single' | 'imports'
+const activeTab = ref<UploadMode>('multi')
+
+function switchTab(tab: UploadMode): void {
+  activeTab.value = tab
+  if (tab === 'imports') fetchImports()
+}
+
+// --- Single File Upload ---
+// The single file is a flattened subset of the four multi-file sources. Columns not
+// present here are stored blank. (See docs mapping — Site is keyed on Location.)
+const singleCategory: CategoryInfo = {
+  fileType: 'EPICOLLECT', // filler: not used for single-file routing
+  formKey: 'file',
+  title: 'Single File',
+  description: 'One consolidated file containing the essential subset of all data.',
+  icon: 'pi pi-file-import',
+  structure: {
+    headers: [
+      'Sample Name', 'Sample Analysis Type', 'Isolate ID', 'Organism', 'Location', 'River Name',
+      'Isolation source', 'Collection Date', 'Latitude', 'Longitude', 'Collected By',
+      'AMR Resistance genes', 'Sequence Name', 'Element type', 'Class', 'Subclass',
+      'Target length', 'Reference sequence length', '% Coverage of reference sequence',
+      '% Identity to reference sequence', 'Alignment Length', 'Accession of Closest Sequence',
+      'Virulence Genes', 'Plasmid Replicons', 'Predicted SIR profile',
+      'pH', 'Temp of water', 'TDS (mg/L)', 'Dissolved Oxygen (mg/L)'
+    ],
+    exampleRow: [
+      'SAMP-0001', 'WGS', 'ISO-100', 'Klebsiella pneumoniae', 'Groenkloof', 'Apies River',
+      'River Water', '30-11-2017', '-25.7470', '28.2290', 'jane.doe@tuks.co.za',
+      "aph(3')-Ia", "aminoglycoside O-phosphotransferase APH(3')-Ia", 'AMR', 'AMINOGLYCOSIDE', 'KANAMYCIN',
+      '816', '816', '76,44',
+      '79,23', '623', 'WP_015345217.1',
+      'fyuA', 'IncFII', 'R',
+      '6,7', '13,5', '107', '4'
+    ]
+  }
+}
+
+const singleSlot = reactive<SlotState>({ file: null, error: '' })
+const singleStatus = ref<'idle' | 'uploading' | 'success' | 'error'>('idle')
+const singleMessage = ref('')
+const singleWarnings = ref<string[]>([])
+const hasSingleFile = computed(() => singleSlot.file !== null)
+
+function assignSingleFile(file: File | null): void {
+  if (!file) return
+
+  if (!isValidFormat(file)) {
+    singleSlot.file = null
+    singleSlot.error = 'Invalid format. Use .xlsx, .csv, or .tsv'
+    const el = document.getElementById('file-single') as HTMLInputElement | null
+    if (el) el.value = ''
+    return
+  }
+
+  singleSlot.file = file
+  singleSlot.error = ''
+  singleStatus.value = 'idle'
+  singleMessage.value = ''
+  singleWarnings.value = []
+}
+
+function onSingleFileSelected(ev: Event): void {
+  const input = ev.target as HTMLInputElement
+  assignSingleFile(input.files?.[0] ?? null)
+}
+
+function onDropSingleFile(ev: DragEvent): void {
+  assignSingleFile(ev.dataTransfer?.files?.[0] ?? null)
+}
+
+function clearSingle(): void {
+  singleSlot.file = null
+  singleSlot.error = ''
+  singleStatus.value = 'idle'
+  singleMessage.value = ''
+  singleWarnings.value = []
+  const el = document.getElementById('file-single') as HTMLInputElement | null
+  if (el) el.value = ''
+}
+
+async function uploadSingle(): Promise<void> {
+  if (!hasSingleFile.value) return
+
+  singleStatus.value = 'uploading'
+  singleMessage.value = ''
+  singleWarnings.value = []
+
+  const formData = new FormData()
+  formData.append('file', singleSlot.file as File)
+
+  try {
+    const res = await fetch(`${API_BASE}/etl/upload-single`, {
+      method: 'POST',
+      body: formData,
+    })
+
+    if (res.ok) {
+      const data = await res.json()
+      singleStatus.value = 'success'
+      singleMessage.value = data.message || 'File uploaded successfully.'
+      singleWarnings.value = data.warnings || []
+
+      singleSlot.file = null
+      const el = document.getElementById('file-single') as HTMLInputElement | null
+      if (el) el.value = ''
+      fetchImports()
+    } else {
+      const errorText = await res.text()
+      singleStatus.value = 'error'
+      singleMessage.value = errorText || `Upload failed with status: ${res.status}`
+    }
+  } catch (e) {
+    singleStatus.value = 'error'
+    singleMessage.value = e instanceof Error ? e.message : 'Network error. Ensure the backend is running.'
+  }
+}
+
 function isValidFormat(file: File): boolean {
   const n = file.name.toLowerCase()
   return validExtensions.some(ext => n.endsWith(ext))
@@ -179,8 +299,9 @@ async function uploadBatch(): Promise<void> {
       batchStatus.value = 'success'
       globalMessage.value = data.message || 'Batch uploaded successfully.'
       globalWarnings.value = data.warnings || []
-      
+
       Object.keys(slots).forEach((key) => clearSlot(key as EtlFileType))
+      fetchImports()
     } else {
       const errorText = await res.text()
       batchStatus.value = 'error'
@@ -190,6 +311,93 @@ async function uploadBatch(): Promise<void> {
     batchStatus.value = 'error'
     globalMessage.value = e instanceof Error ? e.message : 'Network error. Ensure the backend is running.'
   }
+}
+
+// --- Imports tab (history + rollback) ---
+interface ImportRecord {
+  importId: string
+  importType: 'SINGLE' | 'MULTI' | string
+  fileNames: string | null
+  importedAt: string | null
+  siteCount: number | null
+  sampleCount: number | null
+  isolateCount: number | null
+  sequenceCount: number | null
+  wgsCount: number | null
+}
+
+const imports = ref<ImportRecord[]>([])
+const importsLoading = ref(false)
+const importsError = ref('')
+const rollbackTarget = ref<ImportRecord | null>(null)
+const rollbackBusy = ref(false)
+const importsNotice = ref('')
+const importsNoticeType = ref<'success' | 'error'>('success')
+
+async function fetchImports(): Promise<void> {
+  importsLoading.value = true
+  importsError.value = ''
+  try {
+    const res = await fetch(`${API_BASE}/etl/imports`)
+    if (res.ok) {
+      imports.value = await res.json()
+    } else {
+      importsError.value = `Failed to load imports (status ${res.status}).`
+    }
+  } catch (e) {
+    importsError.value = e instanceof Error ? e.message : 'Network error. Ensure the backend is running.'
+  } finally {
+    importsLoading.value = false
+  }
+}
+
+function askRollback(record: ImportRecord): void {
+  rollbackTarget.value = record
+}
+
+function cancelRollback(): void {
+  if (rollbackBusy.value) return
+  rollbackTarget.value = null
+}
+
+async function confirmRollback(): Promise<void> {
+  const target = rollbackTarget.value
+  if (!target) return
+
+  rollbackBusy.value = true
+  importsNotice.value = ''
+  try {
+    const res = await fetch(`${API_BASE}/etl/imports/${target.importId}`, { method: 'DELETE' })
+    if (res.ok) {
+      importsNoticeType.value = 'success'
+      importsNotice.value = `Rolled back the ${target.importType === 'SINGLE' ? 'single-file' : 'multi-file'} import and deleted its data.`
+      rollbackTarget.value = null
+      await fetchImports()
+    } else {
+      const text = await res.text()
+      importsNoticeType.value = 'error'
+      importsNotice.value = text || `Rollback failed (status ${res.status}).`
+    }
+  } catch (e) {
+    importsNoticeType.value = 'error'
+    importsNotice.value = e instanceof Error ? e.message : 'Network error. Ensure the backend is running.'
+  } finally {
+    rollbackBusy.value = false
+  }
+}
+
+function totalRows(r: ImportRecord): number {
+  return (r.siteCount || 0) + (r.sampleCount || 0) + (r.isolateCount || 0) + (r.sequenceCount || 0) + (r.wgsCount || 0)
+}
+
+function formatDate(iso: string | null): string {
+  if (!iso) return '—'
+  const d = new Date(iso)
+  if (isNaN(d.getTime())) return iso
+  return d.toLocaleString(undefined, {
+    year: 'numeric', month: 'short', day: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  })
 }
 
 const visible = ref(false)
@@ -207,7 +415,37 @@ setTimeout(() => {
       </p>
     </div>
 
-    <section class="upload-section">
+    <div class="tabs" role="tablist">
+      <button
+        class="tab"
+        :class="{ 'tab--active': activeTab === 'multi' }"
+        role="tab"
+        :aria-selected="activeTab === 'multi'"
+        @click="switchTab('multi')"
+      >
+        <i class="pi pi-clone"></i> Multi file
+      </button>
+      <button
+        class="tab"
+        :class="{ 'tab--active': activeTab === 'single' }"
+        role="tab"
+        :aria-selected="activeTab === 'single'"
+        @click="switchTab('single')"
+      >
+        <i class="pi pi-file-import"></i> Single file
+      </button>
+      <button
+        class="tab"
+        :class="{ 'tab--active': activeTab === 'imports' }"
+        role="tab"
+        :aria-selected="activeTab === 'imports'"
+        @click="switchTab('imports')"
+      >
+        <i class="pi pi-history"></i> Imports
+      </button>
+    </div>
+
+    <section v-show="activeTab === 'multi'" class="upload-section">
       <div class="section-header">
         <h2 class="section-title">Data Sources</h2>
         <p class="section-desc">Accepted formats: <strong>.xlsx, .csv, .tsv</strong>.</p>
@@ -282,7 +520,7 @@ setTimeout(() => {
       </div>
     </section>
 
-    <section class="batch-actions-section">
+    <section v-show="activeTab === 'multi'" class="batch-actions-section">
       <div class="batch-buttons">
         <button 
           class="btn btn--ghost" 
@@ -314,6 +552,234 @@ setTimeout(() => {
         </div>
       </div>
     </section>
+
+    <section v-show="activeTab === 'single'" class="upload-section">
+      <div class="section-header">
+        <h2 class="section-title">Single File</h2>
+        <p class="section-desc">
+          Upload one consolidated file containing the essential subset of all data.
+          Fields not included in this file are stored blank. Accepted formats: <strong>.xlsx, .csv, .tsv</strong>.
+        </p>
+      </div>
+
+      <article
+        class="upload-card single-card"
+        :class="{
+          'upload-card--staged': singleSlot.file,
+          'upload-card--err': singleSlot.error,
+          'upload-card--disabled': singleStatus === 'uploading'
+        }"
+      >
+        <div class="card-head">
+          <span class="card-icon-wrap" aria-hidden="true">
+            <i :class="`pi ${singleCategory.icon} card-icon`"></i>
+          </span>
+          <div class="card-titles">
+            <div class="card-title-row">
+              <h3 class="card-title">{{ singleCategory.title }}</h3>
+              <button class="info-btn" @click.prevent="openInfo(singleCategory)" title="View required format">
+                <i class="pi pi-info-circle"></i>
+              </button>
+            </div>
+            <p class="card-desc">{{ singleCategory.description }}</p>
+          </div>
+        </div>
+
+        <label
+          for="file-single"
+          class="drop-zone"
+          @dragover.prevent
+          @drop.prevent="onDropSingleFile($event)"
+        >
+          <input
+            id="file-single"
+            type="file"
+            class="sr-only"
+            :accept="acceptedFormats"
+            :disabled="singleStatus === 'uploading'"
+            @change="onSingleFileSelected($event)"
+          />
+          <i class="pi pi-cloud-upload drop-icon"></i>
+          <span class="drop-text">
+            <span class="drop-primary">Choose a file</span>
+            <span class="drop-muted">or drop here</span>
+          </span>
+        </label>
+
+        <div v-if="singleSlot.file" class="file-row">
+          <span class="file-name" :title="singleSlot.file!.name">
+            <i class="pi pi-file"></i> {{ singleSlot.file!.name }}
+          </span>
+          <button
+            type="button"
+            class="btn btn--ghost btn--small"
+            :disabled="singleStatus === 'uploading'"
+            @click="clearSingle"
+          >
+            Clear
+          </button>
+        </div>
+
+        <p v-if="singleSlot.error" class="status-msg error-text">
+          <i class="pi pi-exclamation-circle status-icon"></i>
+          {{ singleSlot.error }}
+        </p>
+      </article>
+
+      <div class="batch-actions-section single-actions">
+        <div class="batch-buttons">
+          <button
+            class="btn btn--ghost"
+            @click="clearSingle"
+            :disabled="!hasSingleFile || singleStatus === 'uploading'">
+            Clear
+          </button>
+          <button
+            class="btn btn--primary btn--large"
+            @click="uploadSingle"
+            :disabled="!hasSingleFile || singleStatus === 'uploading'">
+            <span v-if="singleStatus === 'uploading'"><i class="pi pi-spin pi-spinner"></i> Uploading...</span>
+            <span v-else><i class="pi pi-upload"></i> Upload File</span>
+          </button>
+        </div>
+
+        <div v-if="singleMessage" class="global-alert" :class="`alert--${singleStatus}`">
+          <div class="alert-header">
+            <i v-if="singleStatus === 'success'" class="pi pi-check-circle"></i>
+            <i v-else-if="singleStatus === 'error'" class="pi pi-times-circle"></i>
+            <strong>{{ singleMessage }}</strong>
+          </div>
+
+          <div v-if="singleWarnings.length > 0" class="warnings-list">
+            <p class="warnings-title">Warnings generated during import:</p>
+            <ul>
+              <li v-for="(warn, idx) in singleWarnings" :key="idx">{{ warn }}</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section v-show="activeTab === 'imports'" class="upload-section">
+      <div class="section-header section-header--row">
+        <div>
+          <h2 class="section-title">Previous imports</h2>
+          <p class="section-desc">
+            Each row is one upload. Rolling back permanently deletes the data that import created.
+          </p>
+        </div>
+        <button class="btn btn--ghost btn--small" @click="fetchImports" :disabled="importsLoading">
+          <i class="pi" :class="importsLoading ? 'pi-spin pi-spinner' : 'pi-refresh'"></i> Refresh
+        </button>
+      </div>
+
+      <div v-if="importsNotice" class="global-alert" :class="`alert--${importsNoticeType}`">
+        <div class="alert-header">
+          <i v-if="importsNoticeType === 'success'" class="pi pi-check-circle"></i>
+          <i v-else class="pi pi-times-circle"></i>
+          <strong>{{ importsNotice }}</strong>
+        </div>
+      </div>
+
+      <p v-if="importsError" class="status-msg error-text">
+        <i class="pi pi-exclamation-circle status-icon"></i> {{ importsError }}
+      </p>
+
+      <div v-if="importsLoading && imports.length === 0" class="imports-empty">
+        <i class="pi pi-spin pi-spinner"></i> Loading imports…
+      </div>
+
+      <div v-else-if="imports.length === 0 && !importsError" class="imports-empty">
+        <i class="pi pi-inbox"></i>
+        <p>No imports yet. Upload a single or multi-file dataset to see it here.</p>
+      </div>
+
+      <div v-else class="table-responsive imports-table-wrap">
+        <table class="format-table imports-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>File(s)</th>
+              <th>Date</th>
+              <th>Sites</th>
+              <th>Samples</th>
+              <th>Isolates</th>
+              <th>Sequences</th>
+              <th>WGS</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="imp in imports" :key="imp.importId">
+              <td>
+                <span class="type-badge" :class="imp.importType === 'SINGLE' ? 'type-badge--single' : 'type-badge--multi'">
+                  <i class="pi" :class="imp.importType === 'SINGLE' ? 'pi-file-import' : 'pi-clone'"></i>
+                  {{ imp.importType === 'SINGLE' ? 'Single' : 'Multi' }}
+                </span>
+              </td>
+              <td class="files-cell" :title="imp.fileNames || ''">{{ imp.fileNames || '—' }}</td>
+              <td>{{ formatDate(imp.importedAt) }}</td>
+              <td>{{ imp.siteCount ?? 0 }}</td>
+              <td>{{ imp.sampleCount ?? 0 }}</td>
+              <td>{{ imp.isolateCount ?? 0 }}</td>
+              <td>{{ imp.sequenceCount ?? 0 }}</td>
+              <td>{{ imp.wgsCount ?? 0 }}</td>
+              <td class="action-cell">
+                <button
+                  class="btn btn--danger btn--small"
+                  @click="askRollback(imp)"
+                  :disabled="rollbackBusy"
+                >
+                  <i class="pi pi-undo"></i> Rollback
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <Transition name="fade">
+      <div v-if="rollbackTarget" class="modal-backdrop" @click="cancelRollback">
+        <div class="modal-content modal-content--narrow" @click.stop>
+          <div class="modal-header">
+            <div class="modal-title-group">
+              <i class="pi pi-exclamation-triangle modal-title-icon modal-title-icon--danger"></i>
+              <h2>Roll back this import?</h2>
+            </div>
+            <button class="modal-close-btn" @click="cancelRollback" :disabled="rollbackBusy"><i class="pi pi-times"></i></button>
+          </div>
+
+          <div class="modal-body">
+            <p class="modal-instruction">
+              This will <strong>permanently delete</strong> all data created by this
+              {{ rollbackTarget.importType === 'SINGLE' ? 'single-file' : 'multi-file' }} import. This action cannot be undone.
+            </p>
+            <ul class="rollback-summary">
+              <li><strong>File(s):</strong> {{ rollbackTarget.fileNames || '—' }}</li>
+              <li><strong>Imported:</strong> {{ formatDate(rollbackTarget.importedAt) }}</li>
+              <li>
+                <strong>Will delete:</strong>
+                {{ rollbackTarget.siteCount ?? 0 }} sites,
+                {{ rollbackTarget.sampleCount ?? 0 }} samples,
+                {{ rollbackTarget.isolateCount ?? 0 }} isolates,
+                {{ rollbackTarget.sequenceCount ?? 0 }} sequences,
+                {{ rollbackTarget.wgsCount ?? 0 }} WGS records
+                ({{ totalRows(rollbackTarget) }} rows total)
+              </li>
+            </ul>
+          </div>
+
+          <div class="modal-footer">
+            <button class="btn btn--ghost" @click="cancelRollback" :disabled="rollbackBusy">Cancel</button>
+            <button class="btn btn--danger" @click="confirmRollback" :disabled="rollbackBusy">
+              <span v-if="rollbackBusy"><i class="pi pi-spin pi-spinner"></i> Rolling back…</span>
+              <span v-else><i class="pi pi-undo"></i> Yes, roll back</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </Transition>
 
     <Transition name="fade">
       <div v-if="selectedInfo" class="modal-backdrop" @click="closeInfo">
@@ -400,8 +866,153 @@ setTimeout(() => {
   max-width: 640px;
 }
 
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--c-border);
+  margin-bottom: 24px;
+}
+
+.tab {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--c-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 10px 16px;
+  margin-bottom: -1px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover {
+  color: var(--c-heading);
+}
+
+.tab--active {
+  color: var(--c-brand);
+  border-bottom-color: var(--c-brand);
+}
+
 .upload-section {
   padding-bottom: 24px;
+}
+
+.single-card {
+  max-width: 520px;
+}
+
+.single-actions {
+  border-top: none;
+  padding-top: 20px;
+  margin-top: 0;
+}
+
+/* --- Imports tab --- */
+.section-header--row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.imports-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px 20px;
+  color: var(--c-text-muted);
+  font-size: 13px;
+  text-align: center;
+  border: 1px dashed var(--c-border-strong);
+  border-radius: 10px;
+  background: var(--c-bg);
+}
+
+.imports-empty .pi {
+  font-size: 24px;
+  color: var(--c-text-dim);
+}
+
+.imports-table-wrap {
+  margin-top: 8px;
+}
+
+.imports-table th,
+.imports-table td {
+  white-space: nowrap;
+}
+
+.imports-table .files-cell {
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.imports-table .action-cell {
+  text-align: right;
+}
+
+.type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.type-badge--single {
+  background: var(--c-brand-dim);
+  color: var(--c-brand);
+  border-color: color-mix(in srgb, var(--c-brand) 30%, transparent);
+}
+
+.type-badge--multi {
+  background: color-mix(in srgb, var(--c-green) 12%, transparent);
+  color: color-mix(in srgb, var(--c-green) 80%, black);
+  border-color: color-mix(in srgb, var(--c-green) 30%, transparent);
+}
+
+.modal-content--narrow {
+  max-width: 460px;
+}
+
+.modal-title-icon--danger {
+  color: var(--c-red);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px 20px;
+  border-top: 1px solid var(--c-border);
+}
+
+.rollback-summary {
+  margin: 12px 0 0;
+  padding: 14px 16px;
+  list-style: none;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: var(--c-text);
+  line-height: 1.7;
+}
+
+.rollback-summary li + li {
+  margin-top: 2px;
 }
 
 .section-header {
@@ -637,6 +1248,21 @@ setTimeout(() => {
   background: var(--c-brand-dim);
   color: var(--c-heading);
   border-color: var(--c-border-strong);
+}
+
+.btn--danger {
+  background: var(--c-red);
+  color: #fff;
+  border-color: var(--c-red);
+}
+
+.btn--danger:hover:not(:disabled) {
+  filter: brightness(1.08);
+}
+
+.btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .batch-actions-section {

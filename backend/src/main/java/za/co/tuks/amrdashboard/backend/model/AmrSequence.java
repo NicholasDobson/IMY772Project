@@ -32,4 +32,8 @@ public class AmrSequence {
     private Integer referenceSequenceLength;
     private Integer alignmentLength;
     private String accessionClosestSequence;
+
+    // The import run that created this row (null for pre-existing data). Used for rollback.
+    @Column(name = "import_id")
+    private java.util.UUID importId;
 }
