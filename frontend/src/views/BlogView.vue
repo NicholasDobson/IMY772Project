@@ -1,15 +1,20 @@
 <script setup lang="ts">
 /* -- Imports --------------------------------------------------- */
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
-import { getAllBlogs, deleteBlog, type Blog } from '@/api/blog'
+import { useRouter, useRoute } from 'vue-router'
+import { getAllBlogs, getBlogById, deleteBlog, type Blog } from '@/api/blog'
 
 /* -- Reactive state --------------------------------------------- */
 const router = useRouter()
+const route = useRoute()
 const blogs = ref<Blog[]>([])
 const searchQuery = ref('')
 const loading = ref(false)
 const selectedBlog = ref<Blog | null>(null)
+
+/* Transient "copied" toast */
+const toast = ref<{ msg: string; error: boolean } | null>(null)
+let toastTimer: ReturnType<typeof setTimeout> | undefined
 
 /* -- Computed --------------------------------------------------- */
 const filteredBlogs = computed(() => {
@@ -25,10 +30,61 @@ const loadBlogs = async () => {
   loading.value = true
   try {
     blogs.value = await getAllBlogs()
+    await openFromQuery()
   } catch (error) {
     console.error('Failed to load blogs:', error)
   } finally {
     loading.value = false
+  }
+}
+
+/* Open a specific blog when the URL carries ?blog=<id> (shared deep link) */
+const openFromQuery = async () => {
+  const raw = Array.isArray(route.query.blog) ? route.query.blog[0] : route.query.blog
+  if (!raw) return
+  let blog = blogs.value.find(b => String(b.blogId) === String(raw))
+  if (!blog) {
+    try {
+      blog = await getBlogById(Number(raw))
+    } catch {
+      return // unknown/deleted blog id — just show the grid
+    }
+  }
+  if (blog) selectedBlog.value = blog
+}
+
+/* Build the absolute, shareable URL for a blog */
+const blogShareUrl = (blog: Blog): string => {
+  const href = router.resolve({ name: 'education', query: { blog: blog.blogId } }).href
+  return new URL(href, window.location.origin).toString()
+}
+
+const showToast = (msg: string, error = false) => {
+  toast.value = { msg, error }
+  if (toastTimer) clearTimeout(toastTimer)
+  toastTimer = setTimeout(() => { toast.value = null }, 2200)
+}
+
+const copyShareLink = async (blog: Blog) => {
+  const url = blogShareUrl(blog)
+  try {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(url)
+    } else {
+      // Fallback for non-secure contexts (e.g. plain http during local dev)
+      const ta = document.createElement('textarea')
+      ta.value = url
+      ta.style.position = 'fixed'
+      ta.style.opacity = '0'
+      document.body.appendChild(ta)
+      ta.focus()
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    showToast('Link copied to clipboard')
+  } catch {
+    showToast('Could not copy link', true)
   }
 }
 
@@ -47,6 +103,8 @@ const formatDate = (dateString: string): string => {
 
 const expandBlog = (blog: Blog) => {
   selectedBlog.value = blog
+  // Reflect the open blog in the URL so it can be refreshed/shared.
+  router.replace({ name: 'education', query: { blog: blog.blogId } })
 }
 
 const handleDelete = async (blog: Blog, event: MouseEvent) => {
@@ -69,6 +127,7 @@ const handleEdit = (blog: Blog, event: MouseEvent) => {
 
 const closeDetail = () => {
   selectedBlog.value = null
+  router.replace({ name: 'education', query: {} })
 }
 
 const relatedBlogs = computed(() => {
@@ -120,6 +179,14 @@ onMounted(loadBlogs)
         class="blog-card"
         @click="expandBlog(blog)"
       >
+        <button
+          class="card-share-btn"
+          title="Copy share link"
+          aria-label="Copy share link"
+          @click.stop="copyShareLink(blog)"
+        >
+          <i class="pi pi-share-alt"></i>
+        </button>
         <img
           v-if="blog.image"
           :src="blog.image"
@@ -145,6 +212,9 @@ onMounted(loadBlogs)
     <div v-else class="detail-page">
       <div class="detail-header">
         <button class="back-button" @click="closeDetail">← Back to blogs</button>
+        <button class="share-button" @click="copyShareLink(selectedBlog)">
+          <i class="pi pi-share-alt"></i> Share
+        </button>
       </div>
       <div class="detail-grid">
         <article class="detail-main">
@@ -183,6 +253,19 @@ onMounted(loadBlogs)
         </aside>
       </div>
     </div>
+
+    <Transition name="toast-fade">
+      <div
+        v-if="toast"
+        class="share-toast"
+        :class="{ 'share-toast--error': toast.error }"
+        role="status"
+        aria-live="polite"
+      >
+        <i class="pi" :class="toast.error ? 'pi-times-circle' : 'pi-check-circle'"></i>
+        {{ toast.msg }}
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -290,6 +373,7 @@ onMounted(loadBlogs)
 }
 
 .blog-card {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -301,6 +385,44 @@ onMounted(loadBlogs)
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: var(--c-shadow);
+}
+
+.card-share-btn {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  z-index: 2;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(2px);
+  font-size: 0.95rem;
+  opacity: 0;
+  transition: opacity 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.blog-card:hover .card-share-btn,
+.card-share-btn:focus-visible {
+  opacity: 1;
+}
+
+.card-share-btn:hover {
+  background: var(--c-brand);
+  transform: translateY(-1px);
+}
+
+/* Touch devices have no hover — keep the button visible there */
+@media (hover: none) {
+  .card-share-btn {
+    opacity: 1;
+  }
 }
 
 .blog-card:hover {
@@ -368,8 +490,32 @@ onMounted(loadBlogs)
 
 .detail-header {
   display: flex;
-  justify-content: flex-start;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
   margin-bottom: 1.5rem;
+}
+
+.share-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--c-brand);
+  border: 1px solid var(--c-brand);
+  color: #fff;
+  padding: 0.75rem 1.25rem;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: all 0.2s ease;
+}
+
+.share-button:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+  box-shadow: var(--c-shadow-md);
 }
 
 .back-button {
@@ -564,6 +710,46 @@ onMounted(loadBlogs)
   font-family: 'DM Sans', sans-serif;
   line-height: 1.7;
   font-size: 1rem;
+}
+
+/* -- Share toast ------------------------------------------------ */
+.share-toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: var(--c-heading);
+  color: var(--c-surface);
+  border-radius: 0.5rem;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: var(--c-shadow-md);
+}
+
+.share-toast .pi {
+  font-size: 1rem;
+}
+
+.share-toast--error {
+  background: var(--c-red);
+  color: #fff;
+}
+
+.toast-fade-enter-active,
+.toast-fade-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-fade-enter-from,
+.toast-fade-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(8px);
 }
 
 .blog-actions {

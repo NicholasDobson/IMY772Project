@@ -4,6 +4,7 @@
 .claude
 .vscode
 *.pdf
+*.sh
 exampledata
 772-Data
 

@@ -18,6 +18,10 @@ public class Site {
     private Double latitude;
     private Double longitude;
 
+    // The import run that created this row (null for pre-existing data). Used for rollback.
+    @Column(name = "import_id")
+    private java.util.UUID importId;
+
     // One Site has many Water Samples
     @OneToMany(mappedBy = "site", cascade = CascadeType.ALL)
     private List<WaterSample> waterSamples;

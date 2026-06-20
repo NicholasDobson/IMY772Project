@@ -43,4 +43,8 @@ public class Isolate {
 
     @OneToOne(mappedBy = "isolate", cascade = CascadeType.ALL)
     private WgsMetrics wgsMetrics;
+
+    // The import run that created this row (null for pre-existing data). Used for rollback.
+    @Column(name = "import_id")
+    private java.util.UUID importId;
 }

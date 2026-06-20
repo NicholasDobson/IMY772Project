@@ -34,4 +34,8 @@ public class WgsMetrics {
     private Integer n50Value;
 
     private String predictedSirProfile;
+
+    // The import run that created this row (null for pre-existing data). Used for rollback.
+    @Column(name = "import_id")
+    private java.util.UUID importId;
 }
