@@ -1,11 +1,12 @@
 <script setup lang="ts">
 /* ── Imports ─────────────────────────────────────────────────── */
-import { ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { createBlog } from '@/api/blog'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
+import { createBlog, getBlogById, updateBlog } from '@/api/blog'
 
 /* ── Reactive state ───────────────────────────────────────────── */
 const router = useRouter()
+const route = useRoute()
 
 const title = ref('')
 const author = ref('')
@@ -16,6 +17,10 @@ const fileError = ref('')
 const loading = ref(false)
 const error = ref('')
 const success = ref(false)
+
+/* ── Edit mode ────────────────────────────────────────────────── */
+const editId = computed(() => route.params.id ? Number(route.params.id) : null)
+const isEditMode = computed(() => editId.value !== null)
 
 /* ── Methods ──────────────────────────────────────────────────── */
 const handleFileChange = (event: Event) => {
@@ -48,20 +53,28 @@ const handleSubmit = async () => {
   loading.value = true
   error.value = ''
 
-  const formData = new FormData()
-  formData.append('title', title.value)
-  formData.append('author', author.value)
-  formData.append('content', content.value)
-  if (selectedFile.value) {
-    formData.append('image', selectedFile.value)
-  }
-
   try {
-    await createBlog(formData)
+    if (isEditMode.value && editId.value) {
+      await updateBlog(editId.value, {
+        title: title.value,
+        author: author.value,
+        content: content.value,
+      })
+    } else {
+      const formData = new FormData()
+      formData.append('title', title.value)
+      formData.append('author', author.value)
+      formData.append('content', content.value)
+      if (selectedFile.value) {
+        formData.append('image', selectedFile.value)
+      }
+      await createBlog(formData)
+    }
+
     success.value = true
     router.push({ name: 'education' })
   } catch (err) {
-    error.value = err instanceof Error ? err.message : 'Failed to create blog'
+    error.value = err instanceof Error ? err.message : isEditMode.value ? 'Failed to update blog' : 'Failed to create blog'
   } finally {
     loading.value = false
   }
@@ -70,12 +83,29 @@ const handleSubmit = async () => {
 const handleCancel = () => {
   router.push({ name: 'education' })
 }
+
+/* ── Lifecycle ────────────────────────────────────────────────── */
+onMounted(async () => {
+  if (editId.value) {
+    try {
+      const blog = await getBlogById(editId.value)
+      title.value = blog.title
+      author.value = blog.author
+      content.value = blog.content
+      if (blog.image) {
+        imagePreview.value = blog.image
+      }
+    } catch (err) {
+      error.value = 'Failed to load blog post for editing'
+    }
+  }
+})
 </script>
 
 <template>
   <div class="create-blog-view">
     <div class="form-header">
-      <h1 class="form-title">Create New Blog Post</h1>
+      <h1 class="form-title">{{ isEditMode ? 'Edit Blog Post' : 'Create New Blog Post' }}</h1>
       <p class="form-subtitle">Share your insights and knowledge about antimicrobial resistance</p>
     </div>
 
@@ -84,7 +114,7 @@ const handleCancel = () => {
         <!-- Success Message -->
         <div v-if="success" class="success-message">
           <span class="success-icon">✓</span>
-          Blog post created successfully! Redirecting...
+          Blog post {{ isEditMode ? 'updated' : 'created' }} successfully! Redirecting...
         </div>
 
         <!-- Error Message -->
@@ -167,8 +197,8 @@ const handleCancel = () => {
             class="btn btn-primary"
             :disabled="loading || success"
           >
-            <span v-if="loading">Creating...</span>
-            <span v-else>Create Blog Post</span>
+            <span v-if="loading">{{ isEditMode ? 'Saving...' : 'Creating...' }}</span>
+            <span v-else>{{ isEditMode ? 'Save Changes' : 'Create Blog Post' }}</span>
           </button>
         </div>
       </form>

@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
+import { useAuthStore } from '@/stores/auth'
 
 const themeStore = useThemeStore()
+const authStore = useAuthStore()
 
 const themeOptions: {
   value: ThemeMode
@@ -24,6 +27,17 @@ const themeOptions: {
     description: 'Match your device setting',
   },
 ]
+
+const userEmail = computed(() => (authStore.user?.email as string) ?? 'Not available')
+
+const userRole = computed(() => {
+  const groups = (authStore.user?.['cognito:groups'] as string[]) ?? []
+  if (groups.includes('PISupervisor')) return 'PI / Supervisor'
+  if (groups.includes('LabScientist')) return 'Lab Scientist'
+  if (groups.includes('FieldResearcher')) return 'Field Researcher'
+  if (groups.includes('Admins')) return 'Administrator'
+  return 'Public User'
+})
 </script>
 
 <template>
@@ -103,31 +117,30 @@ const themeOptions: {
 
       <div class="section-divider"></div>
 
-      <!-- Placeholder sections -->
+      <!-- Account section -->
       <section class="settings-section">
         <div class="section-header">
           <h2 class="section-title">Account</h2>
-          <p class="section-desc">Manage your profile, role, and authentication.</p>
+          <p class="section-desc">Your profile and role information.</p>
         </div>
-        <div class="placeholder-block">
-          <i class="pi pi-user placeholder-icon"></i>
-          <span>Account settings coming soon</span>
-        </div>
-      </section>
 
-      <div class="section-divider"></div>
+        <div class="account-card">
+          <div class="account-avatar">
+            <i class="pi pi-user"></i>
+          </div>
+          <div class="account-cols">
+            <div class="account-col">
+              <span class="account-label">Email</span>
+              <span class="account-value">{{ userEmail }}</span>
+            </div>
+            <div class="account-col-divider"></div>
+            <div class="account-col">
+              <span class="account-label">Role</span>
+              <span class="account-badge">{{ userRole }}</span>
+            </div>
+          </div>
+        </div>
 
-      <section class="settings-section">
-        <div class="section-header">
-          <h2 class="section-title">Notifications</h2>
-          <p class="section-desc">
-            Configure alerts for high-risk detections and upload completions.
-          </p>
-        </div>
-        <div class="placeholder-block">
-          <i class="pi pi-bell placeholder-icon"></i>
-          <span>Notification settings coming soon</span>
-        </div>
       </section>
     </div>
   </div>
@@ -237,91 +250,35 @@ const themeOptions: {
 }
 
 /* Light preview */
-.preview--light {
-  background: #f4f6f8;
-}
-.preview--light .preview-sidebar {
-  background: #ffffff;
-  border-right: 1px solid #e5e7eb;
-}
-.preview--light .preview-logo {
-  background: #e5e7eb;
-}
-.preview--light .preview-nav-item {
-  background: #f3f4f6;
-}
-.preview--light .preview-nav-item--active {
-  background: #dbeafe;
-}
-.preview--light .preview-stat {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-}
-.preview--light .preview-block {
-  background: #e5e7eb;
-}
-.preview--light .preview-block--wide {
-  background: #dbeafe;
-}
+.preview--light { background: #f4f6f8; }
+.preview--light .preview-sidebar { background: #ffffff; border-right: 1px solid #e5e7eb; }
+.preview--light .preview-logo { background: #e5e7eb; }
+.preview--light .preview-nav-item { background: #f3f4f6; }
+.preview--light .preview-nav-item--active { background: #dbeafe; }
+.preview--light .preview-stat { background: #ffffff; border: 1px solid #e5e7eb; }
+.preview--light .preview-block { background: #e5e7eb; }
+.preview--light .preview-block--wide { background: #dbeafe; }
 
 /* Dark preview */
-.preview--dark {
-  background: #0a0f1a;
-}
-.preview--dark .preview-sidebar {
-  background: #0c1420;
-  border-right: 1px solid rgba(255, 255, 255, 0.07);
-}
-.preview--dark .preview-logo {
-  background: rgba(255, 255, 255, 0.08);
-}
-.preview--dark .preview-nav-item {
-  background: rgba(255, 255, 255, 0.05);
-}
-.preview--dark .preview-nav-item--active {
-  background: rgba(59, 130, 246, 0.15);
-}
-.preview--dark .preview-stat {
-  background: #101d2e;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-.preview--dark .preview-block {
-  background: rgba(255, 255, 255, 0.08);
-}
-.preview--dark .preview-block--wide {
-  background: rgba(59, 130, 246, 0.12);
-}
+.preview--dark { background: #0a0f1a; }
+.preview--dark .preview-sidebar { background: #0c1420; border-right: 1px solid rgba(255,255,255,0.07); }
+.preview--dark .preview-logo { background: rgba(255,255,255,0.08); }
+.preview--dark .preview-nav-item { background: rgba(255,255,255,0.05); }
+.preview--dark .preview-nav-item--active { background: rgba(59,130,246,0.15); }
+.preview--dark .preview-stat { background: #101d2e; border: 1px solid rgba(255,255,255,0.08); }
+.preview--dark .preview-block { background: rgba(255,255,255,0.08); }
+.preview--dark .preview-block--wide { background: rgba(59,130,246,0.12); }
 
-/* System preview — split: left half light, right half dark */
-.preview--system {
-  position: relative;
-}
-.preview--system .preview-sidebar {
-  background: linear-gradient(to bottom, #ffffff 50%, #0c1420 50%);
-  border-right: 1px solid #e5e7eb;
-}
-.preview--system .preview-logo {
-  background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255, 255, 255, 0.08) 50%);
-}
-.preview--system .preview-nav-item {
-  background: linear-gradient(to bottom, #f3f4f6 50%, rgba(255, 255, 255, 0.05) 50%);
-}
-.preview--system .preview-nav-item--active {
-  background: linear-gradient(to bottom, #dbeafe 50%, rgba(59, 130, 246, 0.15) 50%);
-}
-.preview--system .preview-content {
-  background: linear-gradient(to bottom, #f4f6f8 50%, #0a0f1a 50%);
-}
-.preview--system .preview-stat {
-  background: linear-gradient(to bottom, #ffffff 50%, #101d2e 50%);
-  border: 1px solid #e5e7eb;
-}
-.preview--system .preview-block {
-  background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255, 255, 255, 0.08) 50%);
-}
-.preview--system .preview-block--wide {
-  background: linear-gradient(to bottom, #dbeafe 50%, rgba(59, 130, 246, 0.12) 50%);
-}
+/* System preview */
+.preview--system { position: relative; }
+.preview--system .preview-sidebar { background: linear-gradient(to bottom, #ffffff 50%, #0c1420 50%); border-right: 1px solid #e5e7eb; }
+.preview--system .preview-logo { background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255,255,255,0.08) 50%); }
+.preview--system .preview-nav-item { background: linear-gradient(to bottom, #f3f4f6 50%, rgba(255,255,255,0.05) 50%); }
+.preview--system .preview-nav-item--active { background: linear-gradient(to bottom, #dbeafe 50%, rgba(59,130,246,0.15) 50%); }
+.preview--system .preview-content { background: linear-gradient(to bottom, #f4f6f8 50%, #0a0f1a 50%); }
+.preview--system .preview-stat { background: linear-gradient(to bottom, #ffffff 50%, #101d2e 50%); border: 1px solid #e5e7eb; }
+.preview--system .preview-block { background: linear-gradient(to bottom, #e5e7eb 50%, rgba(255,255,255,0.08) 50%); }
+.preview--system .preview-block--wide { background: linear-gradient(to bottom, #dbeafe 50%, rgba(59,130,246,0.12) 50%); }
 
 /* ── Preview internals ────────────────────────────────── */
 .preview-sidebar {
@@ -437,21 +394,76 @@ const themeOptions: {
   line-height: 1.3;
 }
 
-/* ── Placeholder sections ─────────────────────────────── */
-.placeholder-block {
+/* ── Account card ─────────────────────────────────────── */
+.account-card {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 16px 18px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 18px;
   background: var(--c-card);
   border: 1px solid var(--c-border);
-  border-radius: 8px;
-  font-size: 13px;
-  color: var(--c-text-muted);
+  border-radius: 10px;
+  margin-bottom: 12px;
 }
 
-.placeholder-icon {
-  font-size: 16px;
-  color: var(--c-text-dim);
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--c-brand-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
+
+.account-avatar .pi {
+  font-size: 18px;
+  color: var(--c-brand);
+}
+
+.account-cols {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+
+.account-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-col-divider {
+  width: 1px;
+  background: var(--c-border);
+  align-self: stretch;
+  margin: 0 20px;
+}
+
+.account-label {
+  font-size: 12.5px;
+  color: var(--c-text-muted);
+  font-family: 'DM Sans', sans-serif;
+}
+
+.account-value {
+  font-size: 13px;
+  color: var(--c-heading);
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 500;
+}
+
+.account-badge {
+  font-size: 11.5px;
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  color: var(--c-brand);
+  background: var(--c-brand-dim);
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
 </style>

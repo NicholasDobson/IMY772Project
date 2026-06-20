@@ -60,6 +60,11 @@ const router = createRouter({
       component: () => import('../views/CreateBlogView.vue'),
     },
     {
+      path: '/blog/edit/:id',
+      name: 'blog-edit',
+      component: () => import('@/views/CreateBlogView.vue'),
+    },
+    {
       path: '/bacteria/:name',
       name: 'bacteria-detail',
       component: () => import('../views/BacteriaDetailView.vue'),
